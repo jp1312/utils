@@ -2,8 +2,6 @@
 #============================================================================================#
 
 # Retrieve information concerning the place of interest around a given point
-# it can be useful in pricing for a multitude of applications including motor or SME's. 
-# In fact, knowing that there is 30 bars and no subway station can give us an appreciation on the behavior of the customer.
 
 # To do so, the best in class is the Google Places API. 
 # Indeed, Places features more than 100 million businesses and points of interest 
@@ -26,6 +24,6 @@
 
 
 
-library(axaml)
-data = getPOIs(lat = '48.8', lng = '2.2', radius = '5000', key ='AIzaSyAlibnTRYnUJeiWtpnv1nzOv6LBgbEzCTA', keywords = c('bar','restaurants'))
+source(c("getPOIs.R", "POIsViz.R"))
+data = getPOIs(lat = '48.8', lng = '2.2', radius = '5000', key ='YOUR-KEY', keywords = c('bar','restaurants'))
 POIsViz(data)
