@@ -26,6 +26,5 @@
 
 
 
-library(axaml)
-data = getPOIs(lat = '48.8', lng = '2.2', radius = '5000', key ='AIzaSyAlibnTRYnUJeiWtpnv1nzOv6LBgbEzCTA', keywords = c('bar','restaurants'))
+data = getPOIs(lat = '48.8', lng = '2.2', radius = '5000', key ='YOUR KEY', keywords = c('bar','restaurants'))
 POIsViz(data)
