@@ -1,0 +1,111 @@
+
+
+/* outobs e title */
+proc sql outobs=3;
+title 'sample cliente banca';
+select *
+from prova;
+quit;
+
+
+
+/* describe table */
+proc sql;
+describe table prova;
+quit;
+
+
+/* suppress (some) column headers in output */
+proc sql;
+select pol label='#', articolo /*label='#'*/
+from prova;
+quit;
+
+
+/* referring to a calculated colums */
+proc sql;
+select 
+substr(pol,1,2) length=2 as brev,
+(calculated brev!!'_prova') as prova 
+from prova;
+quit; /* note: you can specify a calculated column only in a select or where caluse */
+
+
+
+/* case-operand form (somiglia ad un if-then clause in a data step) */
+select 
+pol,
+articolo,
+case articolo
+	when '4' then 'good'
+	else 'bad' 
+end as classification
+from prova; 
+
+
+/* per andare a capo negli headers ! */
+select city '#City#(COORDS)', slsl, ajaj;
+quit;
+
+
+
+/* create a table as an existing table: LIKE operator */
+proc sql;
+create table new_table like old_table;
+quit;
+
+
+
+/* inserting rows with the SET clause */
+proc sql;
+	insert into old_table
+		set name='bangladesh',
+			capital='Dhaka'
+		set name='Japan',
+			capital='Tokio';
+	select name, capital
+	from old_table;
+quit;
+
+
+
+/* update a table */
+proc sql;
+	update old_table
+	set population=population*1.05;
+	select name, capital, population 
+	from old_table;
+quit;
+
+
+
+/* deleting rows */
+proc sql;
+	delete
+		from old_table
+		where name like 'R%';
+	quit;
+
+	
+	
+	
+/***************/	
+/* alter table */ (add, modify, delete columns)
+/**************/
+
+
+
+/* add a column */
+proc sql;
+	alter table old_table
+		add density num;
+	select name, capital, density from old_table;
+quit; /* the new columjs is inserted but has no values, use update to put values in it... */
+
+
+
+proc sql;
+update old_table
+	set density=population/area;
+	select name, capital, population, density from old_table;
+quit;

@@ -1,0 +1,50 @@
+
+
+/* posso sfruttare le analisi in componenti principali (e analisi delle mca) per studiare la 
+multicollinearita fra predittori numerici*/
+ 
+proc varclus data=dati.motorins maxeigen=0.70; /* default maxeigen (the value threshold for the algorhytm to split) is 1.. which is too high for several practical examples */
+var _numeric_ /* prende tutte le numeriche */;
+run;
+
+
+/* in maniera piu elementare uso al proc corr
+ ricorda che spearman è per le var ordinali */
+
+proc corr data=dati.motorins nomiss spearman pearson;
+var claims nauto Kilometres;
+run;
+
+
+
+/* per predittori categorici posso azzardare una proc correspod o limitarmi ad una analisi
+bivariata delle associazioni fra predittori come di seguito : */
+
+ods output chisq=work.chi(where=(statistic in ("Cramer's V")));
+proc freq data=dati.motorins;
+tables (kilometres zone make)*(kilometres zone make)/chisq;
+weight Insured;
+/* output out=chi chisq; */
+run;
+
+/*usa "ods trace on" per scoprire il nome della tabella output che sas stampa nei results 
+ ho scoperto che si chiama "chisq" la tabella che contiene i v-cramer */
+
+
+
+
+
+/* posso sfruttare la genmod con un solo predittore e lo statement lsmeans per valutare le correlazioni
+	bivariate fra un predittore e la frequenza con annessi test statistici! */
+
+proc genmod data=dati.motorins;
+class Kilometres; 
+model claims= Kilometres / 
+	dist=poisson 
+	link=log 
+	type1 
+	type3 
+	offset=log_insured
+	scale=pearson;
+lsmeans kilometres/pdiff=all;
+run;

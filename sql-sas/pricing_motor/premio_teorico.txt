@@ -1,0 +1,120 @@
+
+
+data premio_teo;
+set rcampsas.coef_test;
+
+PREMIO_teo = 
+
+/* fc */
+(coef_fc_anno*
+coef_fc_bm*
+coef_fc_prof*
+coef_fc_etaP*
+coef_fc_etaV*
+coef_fc_fraz*
+coef_fc_mar*
+coef_fc_max*
+coef_fc_eta*
+coef_fc_sin*
+coef_fc_cvalkw*
+coef_fc_prov)
+
+*
+
+/* cc */
+(coef_cc_anno*
+coef_cc_bm*
+coef_cc_prof*
+coef_cc_etaP*
+coef_cc_etaV*
+coef_cc_fraz*
+coef_cc_mar*
+coef_cc_max*
+coef_cc_eta*
+coef_cc_sin*
+coef_cc_cvalkw*
+coef_cc_prov) 
+
++
+
+/* fs */
+(coef_fs_anno*
+coef_fs_bm*
+coef_fs_prof*
+coef_fs_etaP*
+coef_fs_etaV*
+coef_fs_fraz*
+coef_fs_mar*
+coef_fs_max*
+coef_fs_eta*
+coef_fs_sin*
+coef_fs_cvalkw*
+coef_fs_prov) 
+
+*
+
+(
+
+/* cs */
+(coef_cs_anno*
+coef_cs_bm*
+coef_cs_prof*
+coef_cs_etaP*
+coef_cs_etaV*
+coef_cs_fraz*
+coef_cs_mar*
+coef_cs_max*
+coef_cs_eta*
+coef_cs_sin*
+coef_cs_cvalkw*
+coef_cs_prov)
+
+-
+
+/* fg */
+(coef_fg_anno*
+coef_fg_bm*
+coef_fg_prof*
+coef_fg_etaP*
+coef_fg_etaV*
+coef_fg_fraz*
+coef_fg_mar*
+coef_fg_max*
+coef_fg_eta*
+coef_fg_sin*
+coef_fg_cvalkw*
+coef_fg_prov)
+
+);
+
+where 2008<=anno<=2012; 
+RUN;
+
+
+
+/*
+
+title 'Analysis of Pure Premium Distribution';
+ods graphics off;
+proc univariate data=premio_teo noprint;
+histogram premio_teo;
+run;
+
+
+
+title 'Analysis of Pure Premium Distribution';
+ods graphics off;
+ods select ParameterEstimates GoodnessOfFit FitQuantiles MyHist;
+proc univariate data=premio_teo;
+   var premio_teo;
+   histogram / midpoints=0.2 to 1.8 by 0.2
+               lognormal
+               weibull
+               gamma
+               vaxis   = axis1
+               name    = 'MyHist';
+   inset n mean(5.3) std='Std Dev'(5.3) skewness(5.3)
+          / pos = ne  header = 'Summary Statistics';
+   axis1 label=(a=90 r=0);
+   where premio_teo > 0;
+run;

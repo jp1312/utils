@@ -1,0 +1,302 @@
+
+
+%macro crea_base_premi(lib=,periodo_estrazione=,label_out=);
+
+/* Inizio merge tables per creazione db base */
+proc sql; 
+create table unione_&label_out._&periodo_estrazione.
+as select
+	step1.DT_INI_VAL_0110F,
+	step1.DT_FIN_VAL_0110F,
+	step6.cd_prod_0006m,
+	step6.ds_prod_0006m,
+	step1.CD_POLIZZA_0020F,
+	step1.CD_PROVENIENZA_0001M,
+	step1.CD_RAMO_MINISTERIALE_0111M,
+	step1.CD_OGGETTO_ASSICURATO_0030F,
+	step1.CD_PARTITA_ASSICURATA_0110F,
+	step2.cd_esterno_tariffa_0050f,
+	step1.CD_SEZIONE_0003M,
+	step1.CD_UNITA_0003M,
+	step1.CD_PROGRESSIVO_MOVIMENTO_0040F,
+	step1.cd_tp_movimento_pol_0012m,
+	step1.NR_ANNO_EMISSIONE_0100F,
+	step6.DT_EFF_POL_0020F as data_prima_emissione,
+	(case when step4.cd_polizza_0020f IS NOT MISSING then 1	else 0 end) as FLG_SOSTITUENTE,
+	step1.DT_INI_COPERTURA_0100F,
+	step1.DT_SCAD_COPERTURA_0100F,
+	step6.nr_durata_pol_0020f,
+	(case when step3.data_annullamento IS NOT MISSING then step3.data_annullamento else '31Dec9999:0:0:0'dt end) format=datetime20. as data_annullamento,
+	(case when step3.data_annullamento IS NOT MISSING then step3.causa_annullamento	else "ATTIVA" end) format=$50. as causa_annullamento,
+	step6.cd_stato_pol_0024M,
+	step5.CD_BENE_0005M,
+	step2.IM_PRE_ANNUO_TAR_NET_0050F,
+	step2.IM_DIR_FRAZ_NETTO_0050F,
+	step2.IM_PREMIO_ANNUO_NETTO_0050F,
+	step2.IM_PREMIO_ANNUO_ACC_0050F,
+	step2.IM_PRE_ANNUO_TAR_ACC_0050F,
+	step6.cd_convenzione_0007m,
+	step6.cd_tp_pagamento_0026m,
+	step6.cd_sigla_nazione_0020f,
+	step6.cd_comp_ania_vendita_0020f,
+	step6.cd_canale_vendita_0008m,
+	step6.ds_banca_0002m,
+	step6.ds_capogruppo_0002m,
+	step6.ds_dtm_0002m,
+	step6.ds_agenzia_0002m,
+	step6.CD_ABI_0002M,
+	step6.CD_CAB_0002M,
+	step6.CD_AGENZIA_0002M,
+	step6.cd_fraz_0025m,
+	step6.cd_persona_0070m,
+	step2.IM_LIMITE_INDENNIZZO_0050F,
+	STEP2.IM_VALORE_FRANCHIGIA_0050F,
+	STEP2.IM_MINIMO_SCOPERTO_0050F,
+	STEP2.IM_MASSIMO_SCOPERTO_0050F,
+	STEP2.IM_SOMMA_ASSICURATA_0050F 
+from sasdata.titoliFIN_&label_out._&periodo_estrazione. as step1
+	left join sasdata.garanzia_pol_&label_out._&periodo_estrazione. as step2
+	on  step1.cd_polizza_0020f=step2.cd_polizza_0020f and
+		step1.cd_oggetto_assicurato_0030f=step2.cd_oggetto_assicurato_0030f and
+		step1.cd_sezione_0003m=step2.cd_sezione_0003m and
+		step1.cd_unita_0003m=step2.cd_unita_0003m and
+		step1.cd_provenienza_0001m=step2.cd_provenienza_0001m and
+		step1.dt_ini_val_0110f between step2.dt_ini_val_0050f and step2.dt_fin_val_0050f 
+	left join sasdata.date_annull_&label_out._&periodo_estrazione. as step3
+		on  step1.CD_POLIZZA_0020F=step3.CD_POLIZZA_0020F and
+			step1.CD_PROVENIENZA_0001M=step3.CD_PROVENIENZA_0001M	
+	left join sasdata.fg_sostituenti_&label_out._&periodo_estrazione. as step4
+			on  step1.CD_POLIZZA_0020F=step4.CD_POLIZZA_0020F and
+				step1.CD_PROVENIENZA_0001M=step4.CD_PROVENIENZA_0001M 
+			left join sasdata.oggetto_assic_&label_out._&periodo_estrazione. as step5
+			on  step1.cd_polizza_0020f=step5.cd_polizza_0020f and
+				step1.cd_oggetto_assicurato_0030f=step5.cd_oggetto_assicurato_0030f and
+				step1.cd_provenienza_0001m=step5.cd_provenienza_0001m and
+				step1.dt_ini_val_0110f between step5.dt_ini_val_0030f and step5.dt_fin_val_0030f 
+			left join sasdata.pol_prod_desc_pc_&periodo_estrazione. as step6 
+				on step1.cd_polizza_0020f=step6.cd_polizza_0020f;	
+create index key_unione on unione_&label_out._&periodo_estrazione. 
+(CD_POLIZZA_0020F,
+CD_PROVENIENZA_0001M,
+CD_OGGETTO_ASSICURATO_0030F,
+CD_PARTITA_ASSICURATA_0110F,
+CD_RAMO_MINISTERIALE_0111M,
+CD_SEZIONE_0003M,
+CD_UNITA_0003M,
+cd_convenzione_0007m,
+cd_bene_0005m);
+quit;
+
+
+PROC SQL;
+create table unione_ds_&label_out._&periodo_estrazione. as select
+a.*,
+c.ds_convenzione_0007m,
+d.ds_bene_0005m,
+f.ds_garanzia_0003m,
+g.FG_TP_CODICE_FISCALE_0070M,
+g.CD_FISCALE_PARTIVA_IVA_0070M,
+g.FG_INDIC_SESSO_CLIENTE_0070M,
+g.DT_NASCITA_CLIENTE_0070M,
+g.DS_NOMINATIVO_0070M,
+g.CD_CAP_0070M,
+g.CD_COMUNE_ISTAT_0070M,
+g.CD_COMUNE_0009M,
+p.ds_comune_0009m,
+g.CD_PROVINCIA_0070M,
+g.DS_PROVINCIA_0070M,
+g.CD_NAZIONE_0010M,
+o.ds_nazione_0010m,
+g.CD_TP_INDIRIZZO_0075M,
+n.ds_tp_indirizzo_0075m,
+l.DS_TP_PAG_0026M as PAGAM
+
+from unione_&label_out._&periodo_estrazione. as a 
+left join ds_convenzione_&periodo_estrazione. as c
+on a.cd_convenzione_0007m=c.cd_convenzione_0007m 
+left join ds_bene_&periodo_estrazione. as d
+on a.cd_bene_0005m=d.cd_bene_0005m
+left join gar_desc_&periodo_estrazione. as f
+on a.cd_sezione_0003m=f.cd_sezione_0003m and 
+	a.cd_unita_0003m=f.cd_unita_0003m 
+left join sasdata.pers_anag_&label_out._&periodo_estrazione. as g
+	on a.cd_persona_0070m=g.cd_persona_0070m and 
+		a.dt_ini_val_0110f between g.dt_ini_val_0070m and g.dt_fin_val_0070m 
+left join ds_tppag_&periodo_estrazione. as l
+on a.CD_TP_PAGAMENTO_0026M=l.cd_tp_pag_0026m 
+left join ds_tpindirizzo_&periodo_estrazione. as n
+on g.CD_TP_INDIRIZZO_0075M=n.CD_TP_INDIRIZZO_0075M left join
+ds_nazione_&periodo_estrazione. as o
+on g.CD_NAZIONE_0010M=o.CD_NAZIONE_0010M left join
+ds_comune_&periodo_estrazione. as p on 
+g.CD_COMUNE_0009M=p.CD_COMUNE_0009M;
+create index key_unione_ds on unione_ds_&label_out._&periodo_estrazione. (CD_POLIZZA_0020F, CD_PROVENIENZA_0001M, CD_OGGETTO_ASSICURATO_0030F, CD_PARTITA_ASSICURATA_0110F, CD_RAMO_MINISTERIALE_0111M, CD_SEZIONE_0003M, CD_UNITA_0003M, DT_SCAD_COPERTURA_0100F, DT_INI_COPERTURA_0100F);
+QUIT;
+
+
+/* Base per creare reportino sui premi per garanzia */
+PROC SQL;
+CREATE TABLE gar_dett_&label_out._&periodo_estrazione. AS SELECT 
+CD_PROD_0006M, 
+DS_PROD_0006M, 
+CD_POLIZZA_0020F,
+CD_OGGETTO_ASSICURATO_0030F, 
+cd_bene_0005m,
+ds_bene_0005m,
+CD_SEZIONE_0003M,
+CD_UNITA_0003M,
+ds_garanzia_0003m,
+CD_RAMO_MINISTERIALE_0111M, 
+CD_TP_MOVIMENTO_POL_0012M, 
+data_prima_emissione, 
+FLG_SOSTITUENTE, 
+DT_INI_COPERTURA_0100F, 
+DT_SCAD_COPERTURA_0100F, 
+data_annullamento, 
+causa_annullamento,
+cd_stato_pol_0024M, 
+CD_CONVENZIONE_0007M, 
+DS_BANCA_0002M, 
+DS_CAPOGRUPPO_0002M, 
+DS_DTM_0002M, 
+DS_AGENZIA_0002M, 
+CD_ABI_0002M, 
+CD_CAB_0002M, 
+CD_AGENZIA_0002M, 
+DS_CONVENZIONE_0007M,
+sum(IM_LIMITE_INDENNIZZO_0050F) as IM_LIMITE_INDENNIZZO_0050F, 
+sum(IM_VALORE_FRANCHIGIA_0050F) as IM_VALORE_FRANCHIGIA_0050F, 
+sum(IM_MINIMO_SCOPERTO_0050F) as IM_MINIMO_SCOPERTO_0050F, 
+sum(IM_MASSIMO_SCOPERTO_0050F) as IM_MASSIMO_SCOPERTO_0050F, 
+sum(IM_SOMMA_ASSICURATA_0050F) as IM_SOMMA_ASSICURATA_0050F,
+max(CD_PARTITA_ASSICURATA_0110F) as CD_PARTITA_ASSICURATA_0110F, 
+sum(IM_PRE_ANNUO_TAR_NET_0050F) as IM_PRE_ANNUO_TAR_NET_0050F, 
+sum(IM_DIR_FRAZ_NETTO_0050F) as IM_DIR_FRAZ_NETTO_0050F, 
+sum(IM_PREMIO_ANNUO_NETTO_0050F) as IM_PREMIO_ANNUO_NETTO_0050F, 
+sum(IM_PREMIO_ANNUO_ACC_0050F) as IM_PREMIO_ANNUO_ACC_0050F, 
+sum(IM_PRE_ANNUO_TAR_ACC_0050F) as IM_PRE_ANNUO_TAR_ACC_0050F
+FROM unione_ds_&label_out._&periodo_estrazione.
+where CD_PROVENIENZA_0001M=2
+group by 1,2,3,4,5,6,7,8,9,10,
+	11,12,13,14,15,16,17,18,19,20,
+	21,22,23,24,25,26,27;
+QUIT;
+
+proc sql;
+create table max_scad_gar_&label_out._&periodo_estrazione. as select distinct
+CD_POLIZZA_0020F,
+CD_OGGETTO_ASSICURATO_0030F,
+CD_RAMO_MINISTERIALE_0111M,
+CD_SEZIONE_0003M,
+CD_UNITA_0003M,
+max(min(DT_SCAD_COPERTURA_0100F,data_annullamento)) format=datetime20. as data_ultima_scadenza
+from gar_dett_&label_out._&periodo_estrazione.
+group by 1,2,3,4,5;
+create index key_maxscadgar on max_scad_gar_&label_out._&periodo_estrazione. (CD_POLIZZA_0020F,CD_OGGETTO_ASSICURATO_0030F,
+CD_RAMO_MINISTERIALE_0111M,CD_SEZIONE_0003M,CD_UNITA_0003M);
+quit;
+
+proc sql;
+create table &lib..DB_BASE_PREMI_GAR_&label_out._&periodo_estrazione. as select
+a.*,
+b.data_ultima_scadenza
+from gar_dett_&label_out._&periodo_estrazione. as a left join max_scad_gar_&label_out._&periodo_estrazione. as b
+on 
+a.CD_POLIZZA_0020F=b.CD_POLIZZA_0020F and
+a.cd_oggetto_assicurato_0030f=b.cd_oggetto_assicurato_0030f and 
+a.CD_RAMO_MINISTERIALE_0111M=b.CD_RAMO_MINISTERIALE_0111M and
+a.CD_SEZIONE_0003M=b.CD_SEZIONE_0003M and
+a.CD_UNITA_0003M=b.CD_UNITA_0003M;
+create index key_basegar on &lib..DB_BASE_PREMI_GAR_&label_out._&periodo_estrazione. (CD_POLIZZA_0020F, CD_OGGETTO_ASSICURATO_0030F,
+CD_RAMO_MINISTERIALE_0111M, CD_SEZIONE_0003M,CD_UNITA_0003M, DT_INI_COPERTURA_0100F, DT_SCAD_COPERTURA_0100F);
+quit; 
+
+/* Creazione base ridotta (x ramo) per attaccare i sinistri */
+PROC SQL;
+CREATE TABLE riduci_&label_out._&periodo_estrazione. AS SELECT 
+CD_PROD_0006M, 
+DS_PROD_0006M, 
+CD_POLIZZA_0020F, 
+CD_RAMO_MINISTERIALE_0111M, 
+CD_TP_MOVIMENTO_POL_0012M, 
+NR_ANNO_EMISSIONE_0100F, 
+data_prima_emissione, 
+FLG_SOSTITUENTE, 
+DT_INI_COPERTURA_0100F, 
+DT_SCAD_COPERTURA_0100F, 
+data_annullamento, 
+causa_annullamento,
+cd_stato_pol_0024M, 
+CD_CONVENZIONE_0007M, 
+CD_TP_PAGAMENTO_0026M, 
+CD_SIGLA_NAZIONE_0020F, 
+CD_COMP_ANIA_VENDITA_0020F, 
+CD_CANALE_VENDITA_0008M, 
+DS_BANCA_0002M, 
+DS_CAPOGRUPPO_0002M, 
+DS_DTM_0002M, 
+DS_AGENZIA_0002M, 
+CD_ABI_0002M, 
+CD_CAB_0002M, 
+CD_AGENZIA_0002M, 
+CD_FRAZ_0025M, 
+CD_PERSONA_0070M, 
+DS_CONVENZIONE_0007M, 
+FG_TP_CODICE_FISCALE_0070M, 
+CD_FISCALE_PARTIVA_IVA_0070M, 
+FG_INDIC_SESSO_CLIENTE_0070M, 
+DT_NASCITA_CLIENTE_0070M, 
+DS_NOMINATIVO_0070M, 
+CD_CAP_0070M, 
+CD_COMUNE_ISTAT_0070M, 
+CD_COMUNE_0009M, 
+DS_COMUNE_0009M, 
+CD_PROVINCIA_0070M, 
+DS_PROVINCIA_0070M, 
+CD_NAZIONE_0010M, 
+DS_NAZIONE_0010M, 
+CD_TP_INDIRIZZO_0075M, 
+DS_TP_INDIRIZZO_0075M, 
+PAGAM,
+sum(IM_LIMITE_INDENNIZZO_0050F) as IM_LIMITE_INDENNIZZO_0050F, 
+sum(IM_VALORE_FRANCHIGIA_0050F) as IM_VALORE_FRANCHIGIA_0050F, 
+sum(IM_MINIMO_SCOPERTO_0050F) as IM_MINIMO_SCOPERTO_0050F, 
+sum(IM_MASSIMO_SCOPERTO_0050F) as IM_MASSIMO_SCOPERTO_0050F, 
+sum(IM_SOMMA_ASSICURATA_0050F) as IM_SOMMA_ASSICURATA_0050F,
+max(CD_PARTITA_ASSICURATA_0110F) as CD_PARTITA_ASSICURATA_0110F, 
+sum(IM_PRE_ANNUO_TAR_NET_0050F) as IM_PRE_ANNUO_TAR_NET_0050F, 
+sum(IM_DIR_FRAZ_NETTO_0050F) as IM_DIR_FRAZ_NETTO_0050F, 
+sum(IM_PREMIO_ANNUO_NETTO_0050F) as IM_PREMIO_ANNUO_NETTO_0050F, 
+sum(IM_PREMIO_ANNUO_ACC_0050F) as IM_PREMIO_ANNUO_ACC_0050F, 
+sum(IM_PRE_ANNUO_TAR_ACC_0050F) as IM_PRE_ANNUO_TAR_ACC_0050F
+FROM unione_ds_&label_out._&periodo_estrazione.
+where CD_PROVENIENZA_0001M=2
+group by 1,2,3,4,5,6,7,8,9,10,
+	11,12,13,14,15,16,17,18,19,20,
+	21,22,23,24,25,26,27,28,29,30,
+	31,32,33,34,35,36,37,38,39,40,
+	41,42,43,44;
+QUIT;
+
+proc sql;
+create table max_scad_ramo_&label_out._&periodo_estrazione. as select distinct
+CD_POLIZZA_0020F, 
+CD_RAMO_MINISTERIALE_0111M,
+max(min(DT_SCAD_COPERTURA_0100F,data_annullamento)) format=datetime20. as data_ultima_scadenza
+from riduci_&label_out._&periodo_estrazione.
+group by 1,2;
+create index key_maxscadramo on max_scad_ramo_&label_out._&periodo_estrazione. (CD_POLIZZA_0020F,CD_RAMO_MINISTERIALE_0111M);
+quit;
+
+proc sql;
+create table &lib..DB_BASE_PREMI_RAMO_&label_out._&periodo_estrazione. as select
+a.*,
+b.data_ultima_scadenza
+from riduci_&label_out._&periodo_estrazione. as a left join max_scad_ramo_&label_out._&periodo_estrazione. as b
+on 
+a.CD_POLIZZA_0020F=b.CD_POLIZZA_0020F and 
+a.CD_RAMO_MINISTERIALE_0111M=b.CD_RAMO_MINISTERIALE_0111M;
+create index key_baseramo on &lib..DB_BASE_PREMI_RAMO_&label_out._&periodo_estrazione. (CD_POLIZZA_0020F, CD_RAMO_MINISTERIALE_0111M, DT_INI_COPERTURA_0100F, DT_SCAD_COPERTURA_0100F);
+quit; 
+
+%mend;

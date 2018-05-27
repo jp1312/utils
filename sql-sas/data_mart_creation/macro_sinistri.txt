@@ -1,0 +1,505 @@
+
+%macro elab_sin(periodo_VISTA_SIN=,periodo_estrazione=,anno_N=,anno_N1=,anno_N2=,anno_N3=,anno_N4=);
+
+data sin_start_&periodo_VISTA_SIN.;
+set sinriep.db_report_&periodo_VISTA_SIN.;
+format key_pol $18.;
+informat key_pol $18.;
+numero_polizza=key_pol;
+anno_den=int(mese_pervden/100);
+run;
+
+
+%if &periodo_VISTA_SIN. lt 201501 %then %do;
+
+/* aggiungi info necessarie */
+proc sql;
+create table sin_start2_&periodo_VISTA_SIN. as select 
+a.*,
+b.cd_prod_0006m as cd_prodotto_nais,
+b.ds_prod_0006m as ds_nais
+from sin_start_&periodo_VISTA_SIN. as a left join sasdata.pol_prod_desc_pc_&periodo_estrazione. as b
+on a.numero_polizza=b.cd_polizza_0020f;
+quit; %end;
+
+%else %do; data sin_start2_&periodo_VISTA_SIN.; set sin_start_&periodo_VISTA_SIN.; run; %end; 
+
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/************** elaborazione sinistri ******************/
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+
+data sin_elab_&periodo_VISTA_SIN.;
+set sin_start2_&periodo_VISTA_SIN.;
+
+/*++++++++++++*/
+/* visione N */
+/*++++++++++++*/
+if ramo_bil eq 10 then do;
+
+if (NC=1 or CD=1) and anno_acc eq &anno_N4. and SENZA_SEG ne 1 then caus&anno_N4._N4=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N3. and SENZA_SEG ne 1 then caus&anno_N3._N3=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N2. and SENZA_SEG ne 1 then caus&anno_N2._N2=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N1. and SENZA_SEG ne 1 then caus&anno_N1._N1=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N. and SENZA_SEG ne 1 then caus&anno_N._N=1; 
+end;
+
+else do;
+if anno_acc eq &anno_N4. and SENZA_SEG ne 1 then caus&anno_N4._N4=1;
+if anno_acc eq &anno_N3. and SENZA_SEG ne 1 then caus&anno_N3._N3=1;
+if anno_acc eq &anno_N2. and SENZA_SEG ne 1 then caus&anno_N2._N2=1;
+if anno_acc eq &anno_N1. and SENZA_SEG ne 1 then caus&anno_N1._N1=1;
+if anno_acc eq &anno_N. and SENZA_SEG ne 1 then caus&anno_N._N=1;
+end;
+
+/* carico totale N */
+if anno_acc eq &anno_N4. then car&anno_N4._N4=sum(carico,car_forfait); else car&anno_N4._N4=0;
+if anno_acc eq &anno_N3. then car&anno_N3._N3=sum(carico,car_forfait); else car&anno_N3._N3=0;
+if anno_acc eq &anno_N2. then car&anno_N2._N2=sum(carico,car_forfait); else car&anno_N2._N2=0;
+if anno_acc eq &anno_N1. then car&anno_N1._N1=sum(carico,car_forfait); else car&anno_N1._N1=0;
+if anno_acc eq &anno_N. then car&anno_N._N=sum(carico,car_forfait); else car&anno_N._N=0;
+
+/* carico totale attr N */
+if LARGE=0 then do;
+	car_attr_&anno_N4._N4=car&anno_N4._N4; 
+	car_attr_&anno_N3._N3=car&anno_N3._N3; 
+	car_attr_&anno_N2._N2=car&anno_N2._N2; 
+	car_attr_&anno_N1._N1=car&anno_N1._N1; 
+	car_attr_&anno_N._N=car&anno_N._N; 
+
+	caus_attr_&anno_N4._N4=caus&anno_N4._N4; 
+	caus_attr_&anno_N3._N3=caus&anno_N3._N3; 
+	caus_attr_&anno_N2._N2=caus&anno_N2._N2; 
+	caus_attr_&anno_N1._N1=caus&anno_N1._N1; 
+	caus_attr_&anno_N._N=caus&anno_N._N; 
+end;
+else do;
+	car_attr_&anno_N4._N4=0;
+	car_attr_&anno_N3._N3=0;
+	car_attr_&anno_N2._N2=0;
+	car_attr_&anno_N1._N1=0;
+	car_attr_&anno_N._N=0; 
+
+	caus_attr_&anno_N4._N4=0;
+	caus_attr_&anno_N3._N3=0;
+	caus_attr_&anno_N2._N2=0;
+	caus_attr_&anno_N1._N1=0;
+	caus_attr_&anno_N._N=0; 
+
+end;
+
+
+/*++++++++++++*/
+/* visione N1 */
+/*++++++++++++*/
+
+if ramo_bil eq 10 then do;
+if (NC=1 or CD=1) and anno_acc eq &anno_N4. and sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.) ne 0 then caus&anno_N4._N3=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N3. and sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.) ne 0 then caus&anno_N3._N2=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N2. and sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.) ne 0 then caus&anno_N2._N1=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N1. and sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.) ne 0 then caus&anno_N1._N=1; 
+
+if anno_acc eq &anno_N4. then car&anno_N4._N3=sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.); else car&anno_N4._N3=0;
+if anno_acc eq &anno_N3. then car&anno_N3._N2=sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.); else car&anno_N3._N2=0;
+if anno_acc eq &anno_N2. then car&anno_N2._N1=sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.); else car&anno_N2._N1=0;
+if anno_acc eq &anno_N1. then car&anno_N1._N=sum(nc_pag_a_&anno_N1.,nc_ris_a_&anno_N1.,cg_pag_a_&anno_N1.,cg_ris_a_&anno_N1.,cg_imp_forfait_a_&anno_N1.,cg_ris_forfait_a_&anno_N1.,cd_imp_forfait_a_&anno_N1.,cd_ris_forfait_a_&anno_N1.); else car&anno_N1._N=0;
+end;
+
+else do;
+if anno_acc eq &anno_N4. and sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.) ne 0 then caus&anno_N4._N3=1;
+if anno_acc eq &anno_N3. and sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.) ne 0 then caus&anno_N3._N2=1;
+if anno_acc eq &anno_N2. and sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.) ne 0 then caus&anno_N2._N1=1;
+if anno_acc eq &anno_N1. and sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.) ne 0 then caus&anno_N1._N=1; 
+
+if anno_acc eq &anno_N4. then car&anno_N4._N3=sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.); else car&anno_N4._N3=0;
+if anno_acc eq &anno_N3. then car&anno_N3._N2=sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.); else car&anno_N3._N2=0;
+if anno_acc eq &anno_N2. then car&anno_N2._N1=sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.); else car&anno_N2._N1=0;
+if anno_acc eq &anno_N1. then car&anno_N1._N=sum(re_pag_a_&anno_N1.,re_ris_a_&anno_N1.); else car&anno_N1._N=0;
+end;
+
+/* costruzione carico attritional visione N1 */
+if (ramo_bil=1 and car&anno_N4._N3 ge 100000) or (ramo_bil=2 and car&anno_N4._N3 ge 50000) or (ramo_bil=3 and car&anno_N4._N3 ge 30000)
+or (ramo_bil=6 and car&anno_N4._N3 ge 30000) or (ramo_bil=7 and car&anno_N4._N3 ge 30000) or (ramo_bil=8 and car&anno_N4._N3 ge 100000)
+or (ramo_bil=9 and car&anno_N4._N3 ge 100000) or (ramo_bil=10 and car&anno_N4._N3 ge 150000) 
+or (ramo_bil=12 and car&anno_N4._N3 ge 150000) or (ramo_bil=13 and car&anno_N4._N3 ge 50000) 
+or (ramo_bil=15 and car&anno_N4._N3 ge 30000) or (ramo_bil=16 and car&anno_N4._N3 ge 30000)
+or (ramo_bil=17 and car&anno_N4._N3 ge 30000) or (ramo_bil=18 and car&anno_N4._N3 ge 30000) 
+then do; car_attr_&anno_N4._N3=0; caus_attr_&anno_N4._N3=0; end; else do; car_attr_&anno_N4._N3=car&anno_N4._N3; caus_attr_&anno_N4._N3=caus&anno_N4._N3; end; 
+
+if (ramo_bil=1 and car&anno_N3._N2 ge 100000) or (ramo_bil=2 and car&anno_N3._N2 ge 50000) or (ramo_bil=3 and car&anno_N3._N2 ge 30000)
+or (ramo_bil=6 and car&anno_N3._N2 ge 30000) or (ramo_bil=7 and car&anno_N3._N2 ge 30000) or (ramo_bil=8 and car&anno_N3._N2 ge 100000)
+or (ramo_bil=9 and car&anno_N3._N2 ge 100000) or (ramo_bil=10 and car&anno_N3._N2 ge 150000) 
+or (ramo_bil=12 and car&anno_N3._N2 ge 150000) or (ramo_bil=13 and car&anno_N3._N2 ge 50000) 
+or (ramo_bil=15 and car&anno_N3._N2 ge 30000) or (ramo_bil=16 and car&anno_N3._N2 ge 30000)
+or (ramo_bil=17 and car&anno_N3._N2 ge 30000) or (ramo_bil=18 and car&anno_N3._N2 ge 30000) 
+then do; car_attr_&anno_N3._N2=0; caus_attr_&anno_N3._N2=0; end; else do; car_attr_&anno_N3._N2=car&anno_N3._N2; caus_attr_&anno_N3._N2=caus&anno_N3._N2; end; 
+
+if (ramo_bil=1 and car&anno_N2._N1 ge 100000) or (ramo_bil=2 and car&anno_N2._N1 ge 50000) or (ramo_bil=3 and car&anno_N2._N1 ge 30000)
+or (ramo_bil=6 and car&anno_N2._N1 ge 30000) or (ramo_bil=7 and car&anno_N2._N1 ge 30000) or (ramo_bil=8 and car&anno_N2._N1 ge 100000)
+or (ramo_bil=9 and car&anno_N2._N1 ge 100000) or (ramo_bil=10 and car&anno_N2._N1 ge 150000) 
+or (ramo_bil=12 and car&anno_N2._N1 ge 150000) or (ramo_bil=13 and car&anno_N2._N1 ge 50000) 
+or (ramo_bil=15 and car&anno_N2._N1 ge 30000) or (ramo_bil=16 and car&anno_N2._N1 ge 30000)
+or (ramo_bil=17 and car&anno_N2._N1 ge 30000) or (ramo_bil=18 and car&anno_N2._N1 ge 30000) 
+then do; car_attr_&anno_N2._N1=0; caus_attr_&anno_N2._N1=0; end; else do; car_attr_&anno_N2._N1=car&anno_N2._N1; caus_attr_&anno_N2._N1=caus&anno_N2._N1; end; 
+
+if (ramo_bil=1 and car&anno_N1._N ge 100000) or (ramo_bil=2 and car&anno_N1._N ge 50000) or (ramo_bil=3 and car&anno_N1._N ge 30000)
+or (ramo_bil=6 and car&anno_N1._N ge 30000) or (ramo_bil=7 and car&anno_N1._N ge 30000) or (ramo_bil=8 and car&anno_N1._N ge 100000)
+or (ramo_bil=9 and car&anno_N1._N ge 100000) or (ramo_bil=10 and car&anno_N1._N ge 150000) 
+or (ramo_bil=12 and car&anno_N1._N ge 150000) or (ramo_bil=13 and car&anno_N1._N ge 50000) 
+or (ramo_bil=15 and car&anno_N1._N ge 30000) or (ramo_bil=16 and car&anno_N1._N ge 30000)
+or (ramo_bil=17 and car&anno_N1._N ge 30000) or (ramo_bil=18 and car&anno_N1._N ge 30000) 
+then do; car_attr_&anno_N1._N=0; caus_attr_&anno_N1._N=0; end; else do; car_attr_&anno_N1._N=car&anno_N1._N; caus_attr_&anno_N1._N=caus&anno_N1._N; end;
+
+
+/*+++++++++++++*/
+/* visione N2 */
+/*+++++++++++++*/
+
+if ramo_bil eq 10 then do;
+
+if (NC=1 or CD=1) and anno_acc eq &anno_N4. and sum(nc_pag_a_&anno_N2.,nc_ris_a_&anno_N2.,cg_pag_a_&anno_N2.,cg_ris_a_&anno_N2.,cg_imp_forfait_a_&anno_N2.,cg_ris_forfait_a_&anno_N2.,cd_imp_forfait_a_&anno_N2.,cd_ris_forfait_a_&anno_N2.) ne 0 then caus&anno_N4._N2=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N3. and sum(nc_pag_a_&anno_N2.,nc_ris_a_&anno_N2.,cg_pag_a_&anno_N2.,cg_ris_a_&anno_N2.,cg_imp_forfait_a_&anno_N2.,cg_ris_forfait_a_&anno_N2.,cd_imp_forfait_a_&anno_N2.,cd_ris_forfait_a_&anno_N2.) ne 0 then caus&anno_N3._N1=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N2. and sum(nc_pag_a_&anno_N2.,nc_ris_a_&anno_N2.,cg_pag_a_&anno_N2.,cg_ris_a_&anno_N2.,cg_imp_forfait_a_&anno_N2.,cg_ris_forfait_a_&anno_N2.,cd_imp_forfait_a_&anno_N2.,cd_ris_forfait_a_&anno_N2.) ne 0 then caus&anno_N2._N=1;
+
+/* carico totale N2 */
+if anno_acc eq &anno_N4. then car&anno_N4._N2=sum(nc_pag_a_&anno_N2.,nc_ris_a_&anno_N2.,cg_pag_a_&anno_N2.,cg_ris_a_&anno_N2.,cg_imp_forfait_a_&anno_N2.,cg_ris_forfait_a_&anno_N2.,cd_imp_forfait_a_&anno_N2.,cd_ris_forfait_a_&anno_N2.); else car&anno_N4._N2=0;
+if anno_acc eq &anno_N3. then car&anno_N3._N1=sum(nc_pag_a_&anno_N2.,nc_ris_a_&anno_N2.,cg_pag_a_&anno_N2.,cg_ris_a_&anno_N2.,cg_imp_forfait_a_&anno_N2.,cg_ris_forfait_a_&anno_N2.,cd_imp_forfait_a_&anno_N2.,cd_ris_forfait_a_&anno_N2.); else car&anno_N3._N1=0;
+if anno_acc eq &anno_N2. then car&anno_N2._N=sum(nc_pag_a_&anno_N2.,nc_ris_a_&anno_N2.,cg_pag_a_&anno_N2.,cg_ris_a_&anno_N2.,cg_imp_forfait_a_&anno_N2.,cg_ris_forfait_a_&anno_N2.,cd_imp_forfait_a_&anno_N2.,cd_ris_forfait_a_&anno_N2.); else car&anno_N2._N=0;
+end;
+
+else do;
+if anno_acc eq &anno_N4. and sum(re_pag_a_&anno_N2.,re_ris_a_&anno_N2.) ne 0 then caus&anno_N4._N2=1;
+if anno_acc eq &anno_N3. and sum(re_pag_a_&anno_N2.,re_ris_a_&anno_N2.) ne 0 then caus&anno_N3._N1=1;
+if anno_acc eq &anno_N2. and sum(re_pag_a_&anno_N2.,re_ris_a_&anno_N2.) ne 0 then caus&anno_N2._N=1;
+
+if anno_acc eq &anno_N4. then car&anno_N4._N2=sum(re_pag_a_&anno_N2.,re_ris_a_&anno_N2.); else car&anno_N4._N2=0;
+if anno_acc eq &anno_N3. then car&anno_N3._N1=sum(re_pag_a_&anno_N2.,re_ris_a_&anno_N2.); else car&anno_N3._N1=0;
+if anno_acc eq &anno_N2. then car&anno_N2._N=sum(re_pag_a_&anno_N2.,re_ris_a_&anno_N2.); else car&anno_N2._N=0;
+end;
+
+/* costruzione carico attritional visione N2 */
+if (ramo_bil=1 and car&anno_N4._N2 ge 100000) or (ramo_bil=2 and car&anno_N4._N2 ge 50000) or (ramo_bil=3 and car&anno_N4._N2 ge 30000)
+or (ramo_bil=6 and car&anno_N4._N2 ge 30000) or (ramo_bil=7 and car&anno_N4._N2 ge 30000) or (ramo_bil=8 and car&anno_N4._N2 ge 100000)
+or (ramo_bil=9 and car&anno_N4._N2 ge 100000) or (ramo_bil=10 and car&anno_N4._N2 ge 150000) 
+or (ramo_bil=12 and car&anno_N4._N2 ge 150000) or (ramo_bil=13 and car&anno_N4._N2 ge 50000) 
+or (ramo_bil=15 and car&anno_N4._N2 ge 30000) or (ramo_bil=16 and car&anno_N4._N2 ge 30000)
+or (ramo_bil=17 and car&anno_N4._N2 ge 30000) or (ramo_bil=18 and car&anno_N4._N2 ge 30000) 
+then do; car_attr_&anno_N4._N2=0; caus_attr_&anno_N4._N2=0; end; else do; car_attr_&anno_N4._N2=car&anno_N4._N2; caus_attr_&anno_N4._N2=caus&anno_N4._N2; end; 
+
+if (ramo_bil=1 and car&anno_N3._N1 ge 100000) or (ramo_bil=2 and car&anno_N3._N1 ge 50000) or (ramo_bil=3 and car&anno_N3._N1 ge 30000)
+or (ramo_bil=6 and car&anno_N3._N1 ge 30000) or (ramo_bil=7 and car&anno_N3._N1 ge 30000) or (ramo_bil=8 and car&anno_N3._N1 ge 100000)
+or (ramo_bil=9 and car&anno_N3._N1 ge 100000) or (ramo_bil=10 and car&anno_N3._N1 ge 150000) 
+or (ramo_bil=12 and car&anno_N3._N1 ge 150000) or (ramo_bil=13 and car&anno_N3._N1 ge 50000) 
+or (ramo_bil=15 and car&anno_N3._N1 ge 30000) or (ramo_bil=16 and car&anno_N3._N1 ge 30000)
+or (ramo_bil=17 and car&anno_N3._N1 ge 30000) or (ramo_bil=18 and car&anno_N3._N1 ge 30000) 
+then do; car_attr_&anno_N3._N1=0; caus_attr_&anno_N3._N1=0; end; else do; car_attr_&anno_N3._N1=car&anno_N3._N1; caus_attr_&anno_N3._N1=caus&anno_N3._N1; end; 
+
+if (ramo_bil=1 and car&anno_N2._N ge 100000) or (ramo_bil=2 and car&anno_N2._N ge 50000) or (ramo_bil=3 and car&anno_N2._N ge 30000)
+or (ramo_bil=6 and car&anno_N2._N ge 30000) or (ramo_bil=7 and car&anno_N2._N ge 30000) or (ramo_bil=8 and car&anno_N2._N ge 100000)
+or (ramo_bil=9 and car&anno_N2._N ge 100000) or (ramo_bil=10 and car&anno_N2._N ge 150000) 
+or (ramo_bil=12 and car&anno_N2._N ge 150000) or (ramo_bil=13 and car&anno_N2._N ge 50000) 
+or (ramo_bil=15 and car&anno_N2._N ge 30000) or (ramo_bil=16 and car&anno_N2._N ge 30000)
+or (ramo_bil=17 and car&anno_N2._N ge 30000) or (ramo_bil=18 and car&anno_N2._N ge 30000) 
+then do; car_attr_&anno_N2._N=0; caus_attr_&anno_N2._N=0; end; else do; car_attr_&anno_N2._N=car&anno_N2._N; caus_attr_&anno_N2._N=caus&anno_N2._N; end; 
+
+
+/*+++++++++++++*/
+/* visione N3 */
+/*+++++++++++++*/
+
+if ramo_bil eq 10 then do;
+
+if (NC=1 or CD=1) and anno_acc eq &anno_N4. and sum(nc_pag_a_&anno_N3.,nc_ris_a_&anno_N3.,cg_pag_a_&anno_N3.,cg_ris_a_&anno_N3.,cg_imp_forfait_a_&anno_N3.,cg_ris_forfait_a_&anno_N3.,cd_imp_forfait_a_&anno_N3.,cd_ris_forfait_a_&anno_N3.) ne 0 then caus&anno_N4._N1=1;
+if (NC=1 or CD=1) and anno_acc eq &anno_N3. and sum(nc_pag_a_&anno_N3.,nc_ris_a_&anno_N3.,cg_pag_a_&anno_N3.,cg_ris_a_&anno_N3.,cg_imp_forfait_a_&anno_N3.,cg_ris_forfait_a_&anno_N3.,cd_imp_forfait_a_&anno_N3.,cd_ris_forfait_a_&anno_N3.) ne 0 then caus&anno_N3._N=1;
+
+/* carico totale N3 */
+if anno_acc eq &anno_N4. then car&anno_N4._N1=sum(nc_pag_a_&anno_N3.,nc_ris_a_&anno_N3.,cg_pag_a_&anno_N3.,cg_ris_a_&anno_N3.,cg_imp_forfait_a_&anno_N3.,cg_ris_forfait_a_&anno_N3.,cd_imp_forfait_a_&anno_N3.,cd_ris_forfait_a_&anno_N3.); else car&anno_N4._N1=0;
+if anno_acc eq &anno_N3. then car&anno_N3._N=sum(nc_pag_a_&anno_N3.,nc_ris_a_&anno_N3.,cg_pag_a_&anno_N3.,cg_ris_a_&anno_N3.,cg_imp_forfait_a_&anno_N3.,cg_ris_forfait_a_&anno_N3.,cd_imp_forfait_a_&anno_N3.,cd_ris_forfait_a_&anno_N3.); else car&anno_N3._N=0;
+end;
+
+else do;
+if anno_acc eq &anno_N4. and sum(re_pag_a_&anno_N3.,re_ris_a_&anno_N3.) ne 0 then caus&anno_N4._N1=1;
+if anno_acc eq &anno_N3. and sum(re_pag_a_&anno_N3.,re_ris_a_&anno_N3.) ne 0 then caus&anno_N3._N=1;
+
+if anno_acc eq &anno_N4. then car&anno_N4._N1=sum(re_pag_a_&anno_N3.,re_ris_a_&anno_N3.); else car&anno_N4._N1=0;
+if anno_acc eq &anno_N3. then car&anno_N3._N=sum(re_pag_a_&anno_N3.,re_ris_a_&anno_N3.); else car&anno_N3._N=0;
+end;
+
+
+/* costruzione carico attritional visione N3 */
+if (ramo_bil=1 and car&anno_N4._N1 ge 100000) or (ramo_bil=2 and car&anno_N4._N1 ge 50000) or (ramo_bil=3 and car&anno_N4._N1 ge 30000)
+or (ramo_bil=6 and car&anno_N4._N1 ge 30000) or (ramo_bil=7 and car&anno_N4._N1 ge 30000) or (ramo_bil=8 and car&anno_N4._N1 ge 100000)
+or (ramo_bil=9 and car&anno_N4._N1 ge 100000) or (ramo_bil=10 and car&anno_N4._N1 ge 150000) 
+or (ramo_bil=12 and car&anno_N4._N1 ge 150000) or (ramo_bil=13 and car&anno_N4._N1 ge 50000) 
+or (ramo_bil=15 and car&anno_N4._N1 ge 30000) or (ramo_bil=16 and car&anno_N4._N1 ge 30000)
+or (ramo_bil=17 and car&anno_N4._N1 ge 30000) or (ramo_bil=18 and car&anno_N4._N1 ge 30000) 
+then do; car_attr_&anno_N4._N1=0; caus_attr_&anno_N4._N1=0; end; else do; car_attr_&anno_N4._N1=car&anno_N4._N1; caus_attr_&anno_N4._N1=caus&anno_N4._N1; end; 
+
+if (ramo_bil=1 and car&anno_N3._N ge 100000) or (ramo_bil=2 and car&anno_N3._N ge 50000) or (ramo_bil=3 and car&anno_N3._N ge 30000)
+or (ramo_bil=6 and car&anno_N3._N ge 30000) or (ramo_bil=7 and car&anno_N3._N ge 30000) or (ramo_bil=8 and car&anno_N3._N ge 100000)
+or (ramo_bil=9 and car&anno_N3._N ge 100000) or (ramo_bil=10 and car&anno_N3._N ge 150000) 
+or (ramo_bil=12 and car&anno_N3._N ge 150000) or (ramo_bil=13 and car&anno_N3._N ge 50000) 
+or (ramo_bil=15 and car&anno_N3._N ge 30000) or (ramo_bil=16 and car&anno_N3._N ge 30000)
+or (ramo_bil=17 and car&anno_N3._N ge 30000) or (ramo_bil=18 and car&anno_N3._N ge 30000) 
+then do; car_attr_&anno_N3._N=0; caus_attr_&anno_N3._N=0; end; else do; car_attr_&anno_N3._N=car&anno_N3._N; caus_attr_&anno_N3._N=caus&anno_N3._N; end; 
+
+
+/*+++++++++++++*/
+/* visione N4 */
+/*+++++++++++++*/
+
+if ramo_bil eq 10 then do;
+
+if (NC=1 or CD=1) and anno_acc eq &anno_N4. and sum(nc_pag_a_&anno_N4.,nc_ris_a_&anno_N4.,cg_pag_a_&anno_N4.,cg_ris_a_&anno_N4.,cg_imp_forfait_a_&anno_N4.,cg_ris_forfait_a_&anno_N4.,cd_imp_forfait_a_&anno_N4.,cd_ris_forfait_a_&anno_N4.) ne 0 then caus&anno_N4._N=1;
+
+/* carico totale N4 */
+if anno_acc eq &anno_N4. then car&anno_N4._N=sum(nc_pag_a_&anno_N4.,nc_ris_a_&anno_N4.,cg_pag_a_&anno_N4.,cg_ris_a_&anno_N4.,cg_imp_forfait_a_&anno_N4.,cg_ris_forfait_a_&anno_N4.,cd_imp_forfait_a_&anno_N4.,cd_ris_forfait_a_&anno_N4.); else car&anno_N4._N=0;
+end;
+
+else do;
+if anno_acc eq &anno_N4. and sum(re_pag_a_&anno_N4.,re_ris_a_&anno_N4.) ne 0 then caus&anno_N4._N=1;
+if anno_acc eq &anno_N4. then car&anno_N4._N=sum(re_pag_a_&anno_N4.,re_ris_a_&anno_N4.); else car&anno_N4._N=0;
+end;
+
+
+/* costruzione carico attritional visione N4 */
+if (ramo_bil=1 and car&anno_N4._N ge 100000) or (ramo_bil=2 and car&anno_N4._N ge 50000) or (ramo_bil=3 and car&anno_N4._N ge 30000)
+or (ramo_bil=6 and car&anno_N4._N ge 30000) or (ramo_bil=7 and car&anno_N4._N ge 30000) or (ramo_bil=8 and car&anno_N4._N ge 100000)
+or (ramo_bil=9 and car&anno_N4._N ge 100000) or (ramo_bil=10 and car&anno_N4._N ge 150000) 
+or (ramo_bil=12 and car&anno_N4._N ge 150000) or (ramo_bil=13 and car&anno_N4._N ge 50000) 
+or (ramo_bil=15 and car&anno_N4._N ge 30000) or (ramo_bil=16 and car&anno_N4._N ge 30000)
+or (ramo_bil=17 and car&anno_N4._N ge 30000) or (ramo_bil=18 and car&anno_N4._N ge 30000) 
+then do; car_attr_&anno_N4._N=0; caus_attr_&anno_N4._N=0; end; else do; car_attr_&anno_N4._N=car&anno_N4._N; caus_attr_&anno_N4._N=caus&anno_N4._N; end; 
+
+run;
+
+
+
+
+
+
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/*+++++++ CREAZIONE COLONNE INDIPENDENTI DALL'ANNO (N NOTATION) ++++++++++++/
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+proc sql;
+create table sin_elab_2_&periodo_VISTA_SIN. as select 
+*,
+
+/* N */
+(case 
+		when anno_acc eq &anno_N. then caus_attr_&anno_N._N
+		when anno_acc eq &anno_N1. then caus_attr_&anno_N1._N
+		when anno_acc eq &anno_N2. then caus_attr_&anno_N2._N
+		when anno_acc eq &anno_N3. then caus_attr_&anno_N3._N 
+		when anno_acc eq &anno_N4. then caus_attr_&anno_N4._N 
+		else 0 
+	end) as caus_attr_N	format commax32.,
+
+(case 
+		when anno_acc eq &anno_N. then caus&anno_N._N 																										  
+		when anno_acc eq &anno_N1. then caus&anno_N1._N 																										  
+		when anno_acc eq &anno_N2. then caus&anno_N2._N 																										  
+		when anno_acc eq &anno_N3. then caus&anno_N3._N 																										  
+		when anno_acc eq &anno_N4. then caus&anno_N4._N 																										  
+		else 0 
+	end) as caus_tot_N format commax32.,
+
+(case 
+		when anno_acc eq &anno_N. THEN car_attr_&anno_N._N
+		when anno_acc eq &anno_N1. THEN car_attr_&anno_N1._N
+		when anno_acc eq &anno_N2. THEN car_attr_&anno_N2._N
+		when anno_acc eq &anno_N3. THEN car_attr_&anno_N3._N
+		when anno_acc eq &anno_N4. THEN car_attr_&anno_N4._N
+		else 0 
+	end) as carico_attr_N 	format commax32.,
+
+(case 
+		when anno_acc eq &anno_N. then  car&anno_N._N
+		when anno_acc eq &anno_N1. then  car&anno_N1._N
+		when anno_acc eq &anno_N2. then  car&anno_N2._N
+		when anno_acc eq &anno_N3. then  car&anno_N3._N
+		when anno_acc eq &anno_N4. then  car&anno_N4._N
+		else 0 
+	end) as carico_tot_N format commax32.,
+
+/* N1 */
+(case 
+		when anno_acc eq &anno_N1. then caus_attr_&anno_N1._N1  																							  
+		when anno_acc eq &anno_N2. then caus_attr_&anno_N2._N1  																							  
+		when anno_acc eq &anno_N3. then caus_attr_&anno_N3._N1  																							  
+		when anno_acc eq &anno_N4. then caus_attr_&anno_N4._N1  																							  
+		else 0 
+	end) as caus_attr_N1 format commax32.,
+
+(case 
+		when anno_acc eq &anno_N1. then caus&anno_N1._N1  																							  
+		when anno_acc eq &anno_N2. then caus&anno_N2._N1  																							  
+		when anno_acc eq &anno_N3. then caus&anno_N3._N1  																							  
+		when anno_acc eq &anno_N4. then caus&anno_N4._N1  																							  
+		else 0 
+	end) as caus_tot_N1 format commax32.,
+
+(case 
+	when anno_acc eq &anno_N1. THEN car_attr_&anno_N1._N1
+	when anno_acc eq &anno_N2. THEN car_attr_&anno_N2._N1
+	when anno_acc eq &anno_N3. THEN car_attr_&anno_N3._N1
+	when anno_acc eq &anno_N4. THEN car_attr_&anno_N4._N1
+	else 0 
+	end) as carico_attr_N1 	format commax32.,
+
+(case 
+		when anno_acc eq &anno_N1. then car&anno_N1._N1
+		when anno_acc eq &anno_N2. then car&anno_N2._N1
+		when anno_acc eq &anno_N3. then car&anno_N3._N1
+		when anno_acc eq &anno_N4. then car&anno_N4._N1
+		else 0 
+	end) as carico_tot_N1 	format commax32.,
+
+
+/* N2 */
+(case 
+		when anno_acc eq &anno_N2. then caus_attr_&anno_N2._N2  
+		when anno_acc eq &anno_N3. then caus_attr_&anno_N3._N2  
+		when anno_acc eq &anno_N4. then caus_attr_&anno_N4._N2  
+		else 0 
+	end) as caus_attr_N2  format commax32.,
+
+(case 
+		when anno_acc eq &anno_N2. then caus&anno_N2._N2  																							  
+		when anno_acc eq &anno_N3. then caus&anno_N3._N2  																							  
+		when anno_acc eq &anno_N4. then caus&anno_N4._N2  																							  
+		else 0 
+	end) as caus_tot_N2  format commax32.,
+
+(case 
+	when anno_acc eq &anno_N2. THEN car_attr_&anno_N2._N2
+	when anno_acc eq &anno_N3. THEN car_attr_&anno_N3._N2
+	when anno_acc eq &anno_N4. THEN car_attr_&anno_N4._N2
+	else 0 
+end) as carico_attr_N2 	format commax32.,
+
+(case 
+		when anno_acc eq &anno_N2. then  car&anno_N2._N2
+		when anno_acc eq &anno_N3. then  car&anno_N3._N2
+		when anno_acc eq &anno_N4. then  car&anno_N4._N2
+		else 0 
+	end) as carico_tot_N2 	format commax32.,
+
+
+/* N3 */
+(case 
+		when anno_acc eq &anno_N3. then caus&anno_N3._N3  
+		when anno_acc eq &anno_N4. then caus&anno_N4._N3  
+		else 0 
+	end) as caus_attr_N3  	format commax32.,
+(case 
+		when anno_acc eq &anno_N3. then caus&anno_N3._N3  																							  
+		when anno_acc eq &anno_N4. then caus&anno_N4._N3  																							  
+		else 0 
+	end) as caus_tot_N3  	format commax32.,
+
+(case 
+	when anno_acc eq &anno_N3. THEN car_attr_&anno_N3._N3
+	when anno_acc eq &anno_N4. THEN car_attr_&anno_N4._N3
+	else 0 
+	end) as carico_attr_N3 	format commax32.,
+(case	
+	when anno_acc eq &anno_N3. then  car&anno_N3._N3
+	when anno_acc eq &anno_N4. then  car&anno_N4._N3
+	else 0 
+	end) as carico_tot_N3 	format commax32.,
+
+/* N4 */
+(case when anno_acc eq &anno_N4. then caus&anno_N4._N4  else 0 end) as caus_attr_N4	format commax32.,
+(case when anno_acc eq &anno_N4. then caus&anno_N4._N4	else 0 end) as caus_tot_N4 	format commax32.,
+(case when anno_acc eq &anno_N4. THEN car_attr_&anno_N4._N4 else 0 end) as carico_attr_N4 	format commax32.,
+(case when anno_acc eq &anno_N4. then  car&anno_N4._N4 else 0 end) as carico_tot_N4 format commax32.
+
+from sin_elab_&periodo_VISTA_SIN.;
+quit;
+
+
+
+
+
+/*+++++++++++++++++++++++++++++++++++++++*/
+/*+++++++ CREAZIONE FLG KEEP ++++++++++++/
+/*+++++++++++++++++++++++++++++++++++++*/
+proc sql;
+create table sin_elab_3_&periodo_VISTA_SIN. as select
+*,
+(case when anno_acc ge &anno_N4. and (
+		sum(caus_tot_N,caus_tot_N1,caus_tot_N2,caus_tot_N3,caus_tot_N4) gt 0 OR	
+	abs(sum(carico_tot_N,carico_tot_N1,carico_tot_N2,carico_tot_N3,carico_tot_N4)) gt 0
+	) THEN 1 else 0 end) AS FLG_KEEP
+from sin_elab_2_&periodo_VISTA_SIN.;
+quit;
+
+
+
+
+
+/*++++++++++++++++++++++++++++++++++++*/
+/*+++++++ SUMMARY FINALE *++++++++++++/
+/*++++++++++++++++++++++++++++++++++++*/
+
+proc sql;
+create table riep_sin_&periodo_VISTA_SIN. as select
+numero_polizza,
+cd_prodotto_nais,
+ds_nais, 
+DATA_ACC format=date10. as DATA_ACC,
+anno_acc as anno,
+ramo_bil format=6. as ramo_bilancio,
+
+/* N */
+sum(caus_attr_N) as caus_attr_N	format commax32.,
+sum(caus_tot_N) as caus_tot_N format commax32.,
+sum(carico_attr_N) as carico_attr_N 	format commax32.,
+sum(carico_tot_N) as carico_tot_N 	format commax32.,
+
+/* N1 */
+sum(caus_attr_N1) as caus_attr_N1 format commax32.,
+sum(caus_tot_N1) as caus_tot_N1 format commax32.,
+sum(carico_attr_N1) as carico_attr_N1 	format commax32.,
+sum(carico_tot_N1) as carico_tot_N1 format commax32.,
+
+/* N2 */
+sum(caus_attr_N2) as caus_attr_N2  format commax32.,
+sum(caus_tot_N2) as caus_tot_N2  format commax32.,
+sum(carico_attr_N2) as carico_attr_N2 	format commax32.,
+sum(carico_tot_N2) as carico_tot_N2 	format commax32.,
+
+/* N3 */
+sum(caus_attr_N3) as caus_attr_N3 	format commax32.,
+sum(caus_tot_N3) as caus_tot_N3  	format commax32.,
+sum(carico_attr_N3) as carico_attr_N3 	format commax32.,
+sum(carico_tot_N3) as carico_tot_N3 	format commax32.,
+
+/* N4 */
+sum(caus_attr_N4) as caus_attr_N4 	format commax32.,
+sum(caus_tot_N4) as caus_tot_N4	format commax32.,
+sum(carico_attr_N4) as carico_attr_N4	format commax32.,
+sum(carico_tot_N4) as carico_tot_N4 format commax32.
+
+from sin_elab_3_&periodo_VISTA_SIN.
+where FLG_KEEP eq 1
+group by 1,2,3,4,5,6;
+quit;
+
+/* PULIZIA STEP INTERMEDI */
+proc datasets lib=WORK;
+delete 
+sin_start_&periodo_VISTA_SIN.
+sin_start2_&periodo_VISTA_SIN.
+sin_elab_&periodo_VISTA_SIN.
+sin_elab_2_&periodo_VISTA_SIN.
+sin_elab_3_&periodo_VISTA_SIN.;
+run;
+
+%mend;
+

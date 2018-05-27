@@ -1,0 +1,19 @@
+ods graphics on;
+ods select histogram;
+
+
+proc univariate data=dati.motorins;
+var claims claims_ins;
+hist claims claims_ins / normal;
+freq Insured;
+inset n min max mean median std skewness / position=ne;
+run;
+ods graphics off;
+
+
+proc univariate data=dati.motorins;
+var claims claims_ins;
+hist Claims claims_ins / normal;
+inset n min max mean median std skewness / position=ne;
+run;
+ods graphics off;

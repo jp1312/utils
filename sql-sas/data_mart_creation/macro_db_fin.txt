@@ -1,0 +1,415 @@
+
+%macro db_fin(lib=SASDATA,prod=,label_out=,annoN0=,data_interruz_cy=,data_limite_cy=,periodo_interruz_cy=,periodo_vista_sin=,nyears=0);
+
+/* inizia ciclo per cacolare kpi per l'anno corrente ed eventuali anni precedenti (specificati con nyears) */
+%do i=0 %to &nyears.;
+
+%let i1=%sysfunc(sum(&i,1),1.); /* creo una variabile macro utile per i calcoli nel ciclo */
+%let j=%sysfunc(sum(&i,-1),1.);
+%let annoN&i1.=%sysfunc(sum(&&annoN&i.,-1),4.); /* creo una variabile macro utile per i calcoli nel ciclo */
+
+%if &i.=0 %then %do; 
+	%let data_interruz=&data_interruz_cy.; /* per l'anno corrente la data interruzione e il mese sono definiti dall'utente...*/
+	%let data_limite=&data_limite_cy.;
+	%let mese=%sysfunc(substr(&periodo_interruz_cy.,5,2));
+	%end;
+%else %do; 
+	%let data_interruz=31Dec&&annoN&i.; /* ... mentre per gli anni precedenti sono fissati automaticamente al 31Dec */
+	%let data_limite=31Dec&&annoN&i /*1Jan&&annoN&j*/;
+	%let mese=12;
+	%end;
+
+%let prod_all= ;
+%let nvar=%sysfunc(countw(&prod.,' '));
+%do n = 1 %to &nvar.;
+%let prod_&n.= %scan(&prod., &n., ' ');
+%if &prod_all.= %then %do;
+	%if &n. ne &nvar. %then %do; %let prod_all=&&prod_&n.,; %end;
+	%else %do; %let prod_all=&&prod_&n.; %end;
+%end;
+%else %do;
+%if &n. ne &nvar. %then %do; %let prod_all=&prod_all.&&prod_&n.,; %end;
+%else %do; %let prod_all=&prod_all.&&prod_&n.; %end;
+%end;
+%end;
+
+/* primo proc per l'elaborazione del kpi di competenza */ 
+proc sql;
+create table elab_&label_out._&i. as select
+"&&annoN&i." as anno,
+"&mese." as mese,
+CD_PROD_0006M, 
+DS_PROD_0006M, 
+CD_POLIZZA_0020F, 
+CD_RAMO_MINISTERIALE_0111M, 
+CD_TP_MOVIMENTO_POL_0012M, 
+NR_ANNO_EMISSIONE_0100F, 
+data_prima_emissione, 
+FLG_SOSTITUENTE, 
+DT_INI_COPERTURA_0100F, 
+DT_SCAD_COPERTURA_0100F, 
+data_annullamento,
+data_ultima_scadenza, 
+causa_annullamento, 
+CD_STATO_POL_0024M, /*attiva sostituita o stornata*/
+CD_CONVENZIONE_0007M, 
+CD_TP_PAGAMENTO_0026M, 
+CD_SIGLA_NAZIONE_0020F, 
+CD_COMP_ANIA_VENDITA_0020F, 
+CD_CANALE_VENDITA_0008M, 
+DS_BANCA_0002M, 
+DS_CAPOGRUPPO_0002M, 
+DS_DTM_0002M, 
+DS_AGENZIA_0002M, 
+CD_ABI_0002M, 
+CD_CAB_0002M, 
+CD_AGENZIA_0002M, 
+CD_FRAZ_0025M, 
+CD_PERSONA_0070M, 
+DS_CONVENZIONE_0007M, 
+FG_TP_CODICE_FISCALE_0070M, 
+CD_FISCALE_PARTIVA_IVA_0070M, 
+FG_INDIC_SESSO_CLIENTE_0070M, 
+DT_NASCITA_CLIENTE_0070M, 
+DS_NOMINATIVO_0070M, 
+CD_CAP_0070M, 
+CD_COMUNE_ISTAT_0070M, 
+CD_COMUNE_0009M, 
+DS_COMUNE_0009M, 
+CD_PROVINCIA_0070M, 
+DS_PROVINCIA_0070M, 
+CD_NAZIONE_0010M, 
+DS_NAZIONE_0010M, 
+CD_TP_INDIRIZZO_0075M, 
+DS_TP_INDIRIZZO_0075M, 
+PAGAM,
+IM_LIMITE_INDENNIZZO_0050F, 
+IM_VALORE_FRANCHIGIA_0050F, 
+IM_MINIMO_SCOPERTO_0050F, 
+IM_MASSIMO_SCOPERTO_0050F, 
+IM_SOMMA_ASSICURATA_0050F,
+IM_PRE_ANNUO_TAR_NET_0050F, 
+IM_DIR_FRAZ_NETTO_0050F, 
+IM_PREMIO_ANNUO_NETTO_0050F, 
+IM_PREMIO_ANNUO_ACC_0050F, 
+IM_PRE_ANNUO_TAR_ACC_0050F,
+(case
+	when DT_INI_COPERTURA_0100F ge "31Dec&&annoN&i1..:0:0:0"dt and cd_tp_movimento_pol_0012m in (1,3,54,71) then sum(IM_PRE_ANNUO_TAR_NET_0050F,IM_PRE_ANNUO_TAR_ACC_0050F)
+	else 0 end) as tariffa_ann, 
+(case
+	when DT_INI_COPERTURA_0100F ge "31Dec&&annoN&i1.:0:0:0"dt and cd_tp_movimento_pol_0012m in (1,3,54,71) then sum(IM_PRE_ANNUO_TAR_NET_0050F,IM_PRE_ANNUO_TAR_ACC_0050F,-IM_PREMIO_ANNUO_NETTO_0050F,-IM_PREMIO_ANNUO_ACC_0050F)
+	else 0 end) as sconti_ann, 
+(case
+	when DT_INI_COPERTURA_0100F ge "31Dec&&annoN&i1.:0:0:0"dt and cd_tp_movimento_pol_0012m in (1,3,54,71) then IM_DIR_FRAZ_NETTO_0050F
+	else 0 end) as dir_fraz_ann, 
+(case
+	when DT_INI_COPERTURA_0100F ge "31Dec&&annoN&i1.:0:0:0"dt and cd_tp_movimento_pol_0012m in (1,3,54,71) then sum(IM_PREMIO_ANNUO_NETTO_0050F,IM_DIR_FRAZ_NETTO_0050F,IM_PREMIO_ANNUO_ACC_0050F)
+	else 0 end) as gwp_ann, 
+(case
+	when DT_INI_COPERTURA_0100F ge "31Dec&&annoN&i1.:0:0:0"dt then max(0,sum(IM_PREMIO_ANNUO_NETTO_0050F,IM_DIR_FRAZ_NETTO_0050F,IM_PREMIO_ANNUO_ACC_0050F)*sum(min(DT_SCAD_COPERTURA_0100F,data_annullamento),-DT_INI_COPERTURA_0100F)/sum('1jan2002:0:0:0'dt,-'1jan2001:0:0:0'dt))
+	else 0 end) as gwp,
+max(0,sum(min(DT_SCAD_COPERTURA_0100F,data_annullamento,"&data_limite.:0:0:0"dt),-max(DT_INI_COPERTURA_0100F,"31Dec&&annoN&i1..:0:0:0"dt))/sum('1jan2002:0:0:0'dt,-'1jan2001:0:0:0'dt)) as rischi,
+max(0,sum(IM_PREMIO_ANNUO_NETTO_0050F,IM_DIR_FRAZ_NETTO_0050F,IM_PREMIO_ANNUO_ACC_0050F)*(calculated rischi)) as EP
+from sasdata.db_base_premi_ramo_&label_out._&periodo_estrazione.;
+quit;
+
+
+/* elaboro sinistri */
+proc sql;
+create table sin_&label_out._&i._&periodo_VISTA_SIN._4merge as select
+anno,
+cd_prodotto_nais,
+ds_nais,
+numero_polizza,
+ramo_bilancio,
+data_acc,
+sum(caus_attr_N) as caus_attr_N,
+sum(caus_tot_N) as caus_tot_N,
+sum(carico_attr_N) as carico_attr_N,
+sum(carico_tot_N) as carico_tot_N,
+sum(caus_attr_N1) as caus_attr_N1,
+sum(caus_tot_N1) as caus_tot_N1,
+sum(carico_attr_N1) as carico_attr_N1,
+sum(carico_tot_N1) as carico_tot_N1,
+sum(caus_attr_N2) as caus_attr_N2,
+sum(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+from riep_sin_&periodo_VISTA_SIN. 
+where cd_prodotto_nais in (&prod_all.) and anno eq &&annoN&i. and DATA_ACC le "&data_interruz."d
+group by 1,2,3,4,5,6;
+create index sinkey_&i. on sin_&label_out._&i._&periodo_VISTA_SIN._4merge (numero_polizza,ramo_bilancio,DATA_ACC);
+quit;
+
+/* merge premi e sinistri */
+proc sql;
+create table merge_temp_&i. as select
+(case when a.CD_PROD_0006M is missing then b.cd_prodotto_nais else a.CD_PROD_0006M end) as CD_PROD_0006M, 
+(case when a.DS_PROD_0006M is missing then b.ds_nais else a.DS_PROD_0006M end) as DS_PROD_0006M, 
+(case when a.CD_POLIZZA_0020F is missing then b.numero_polizza else a.CD_POLIZZA_0020F end) as CD_POLIZZA_0020F, 
+(case when a.CD_RAMO_MINISTERIALE_0111M is missing then b.ramo_bilancio else a.CD_RAMO_MINISTERIALE_0111M end) as CD_RAMO_MINISTERIALE_0111M,
+"&&annoN&i." as anno,
+"&mese." as mese,
+a.CD_TP_MOVIMENTO_POL_0012M, 
+a.NR_ANNO_EMISSIONE_0100F, 
+a.data_prima_emissione, 
+a.FLG_SOSTITUENTE, 
+a.DT_INI_COPERTURA_0100F, 
+a.DT_SCAD_COPERTURA_0100F, 
+a.data_annullamento, 
+a.causa_annullamento,
+a.CD_STATO_POL_0024M, 
+a.data_ultima_scadenza,  
+a.CD_CONVENZIONE_0007M, 
+a.CD_TP_PAGAMENTO_0026M, 
+a.CD_SIGLA_NAZIONE_0020F, 
+a.CD_COMP_ANIA_VENDITA_0020F, 
+a.CD_CANALE_VENDITA_0008M, 
+a.DS_BANCA_0002M, 
+a.DS_CAPOGRUPPO_0002M, 
+a.DS_DTM_0002M, 
+a.DS_AGENZIA_0002M, 
+a.CD_ABI_0002M, 
+a.CD_CAB_0002M, 
+a.CD_AGENZIA_0002M, 
+a.CD_FRAZ_0025M, 
+a.CD_PERSONA_0070M, 
+a.DS_CONVENZIONE_0007M, 
+a.FG_TP_CODICE_FISCALE_0070M, 
+a.CD_FISCALE_PARTIVA_IVA_0070M, 
+a.FG_INDIC_SESSO_CLIENTE_0070M, 
+a.DT_NASCITA_CLIENTE_0070M, 
+a.DS_NOMINATIVO_0070M, 
+a.CD_CAP_0070M, 
+a.CD_COMUNE_ISTAT_0070M, 
+a.CD_COMUNE_0009M, 
+a.DS_COMUNE_0009M, 
+a.CD_PROVINCIA_0070M, 
+a.DS_PROVINCIA_0070M, 
+a.CD_NAZIONE_0010M, 
+a.DS_NAZIONE_0010M, 
+a.CD_TP_INDIRIZZO_0075M, 
+a.DS_TP_INDIRIZZO_0075M, 
+a.PAGAM,
+a.IM_LIMITE_INDENNIZZO_0050F, 
+a.IM_VALORE_FRANCHIGIA_0050F, 
+a.IM_MINIMO_SCOPERTO_0050F, 
+a.IM_MASSIMO_SCOPERTO_0050F, 
+a.IM_SOMMA_ASSICURATA_0050F,
+max(a.tariffa_ann) as tariffa_ann,  
+max(a.sconti_ann) as sconti_ann,
+max(a.dir_fraz_ann) as dir_fraz_ann, 
+max(a.gwp_ann) as gwp_ann, 
+max(a.gwp) as gwp,
+max(a.rischi) as rischi,
+max(a.EP) as EP,
+sum(b.caus_attr_N) as caus_attr_N,
+sum(b.caus_tot_N) as caus_tot_N,
+sum(b.carico_attr_N) as carico_attr_N,
+sum(b.carico_tot_N) as carico_tot_N,
+sum(b.caus_attr_N1) as caus_attr_N1,
+sum(b.caus_tot_N1) as caus_tot_N1,
+sum(b.carico_attr_N1) as carico_attr_N1,
+sum(b.carico_tot_N1) as carico_tot_N1,
+sum(b.caus_attr_N2) as caus_attr_N2,
+sum(b.caus_tot_N2) as caus_tot_N2,
+sum(b.carico_attr_N2) as carico_attr_N2,
+sum(b.carico_tot_N2) as carico_tot_N2,
+sum(b.caus_attr_N3) as caus_attr_N3,
+sum(b.caus_tot_N3) as caus_tot_N3,
+sum(b.carico_attr_N3) as carico_attr_N3,
+sum(b.carico_tot_N3) as carico_tot_N3,
+sum(b.caus_attr_N4) as caus_attr_N4,
+sum(b.caus_tot_N4) as caus_tot_N4,
+sum(b.carico_attr_N4) as carico_attr_N4,
+sum(b.carico_tot_N4) as carico_tot_N4
+from elab_&label_out._&i. as a full join sin_&label_out._&i._&periodo_VISTA_SIN._4merge as b
+on 
+a.cd_polizza_0020f=b.numero_polizza and
+a.CD_RAMO_MINISTERIALE_0111M=b.ramo_bilancio and
+b.DATA_ACC ge datepart(a.DT_INI_COPERTURA_0100F) and
+b.DATA_ACC lt datepart(a.DT_SCAD_COPERTURA_0100F)
+group by 1,2,3,4,5,6,7,8,9,10,
+	11,12,13,14,15,16,17,18,19,20,
+	21,22,23,24,25,26,27,28,29,30,
+	31,32,33,34,35,36,37,38,39,40,
+	41,42,43,44,45,46,47,48,49,50,
+	51,52;
+quit;
+
+
+/* raggruppamento dei kpi */
+proc sql;
+create table gruppo_&label_out._&i. as select
+(case
+	when rischi gt 0 or abs(sum(carico_tot_N,carico_tot_N1,carico_tot_N2,carico_tot_N3,carico_tot_N4)) gt 0 then 1
+	else 0 end) as FLG_KEEP,
+anno,
+mese,
+catx('',anno,mese) as periodo,
+CD_PROD_0006M,
+DS_PROD_0006M as PRODOTTO,
+CD_POLIZZA_0020F, 
+CD_RAMO_MINISTERIALE_0111M as RAMO_MINISTERIALE,
+(case
+	when CD_RAMO_MINISTERIALE_0111M in (1,2) then 'Accident&Health'
+	when CD_RAMO_MINISTERIALE_0111M in (3) then 'Mod'
+	when CD_RAMO_MINISTERIALE_0111M in (8,9) then 'Property'
+	when CD_RAMO_MINISTERIALE_0111M in (10,12) then 'Motor'
+	when CD_RAMO_MINISTERIALE_0111M in (13) then 'Liability'
+	else 'Other' end) as LoB,
+data_prima_emissione,
+data_ultima_scadenza,  
+FLG_SOSTITUENTE, 
+data_annullamento, 
+causa_annullamento, 
+CD_STATO_POL_0024M, 
+CD_CONVENZIONE_0007M, 
+CD_TP_PAGAMENTO_0026M, 
+CD_SIGLA_NAZIONE_0020F, 
+CD_COMP_ANIA_VENDITA_0020F, 
+CD_CANALE_VENDITA_0008M, 
+DS_BANCA_0002M, 
+DS_CAPOGRUPPO_0002M, 
+DS_DTM_0002M, 
+DS_AGENZIA_0002M, 
+CD_ABI_0002M, 
+CD_CAB_0002M, 
+CD_AGENZIA_0002M, 
+CD_FRAZ_0025M, 
+CD_PERSONA_0070M, 
+DS_CONVENZIONE_0007M, 
+FG_TP_CODICE_FISCALE_0070M, 
+CD_FISCALE_PARTIVA_IVA_0070M, 
+FG_INDIC_SESSO_CLIENTE_0070M, 
+DT_NASCITA_CLIENTE_0070M, 
+DS_NOMINATIVO_0070M, 
+CD_CAP_0070M, 
+CD_COMUNE_ISTAT_0070M, 
+CD_COMUNE_0009M, 
+DS_COMUNE_0009M, 
+CD_PROVINCIA_0070M, 
+DS_PROVINCIA_0070M, 
+CD_NAZIONE_0010M, 
+DS_NAZIONE_0010M, 
+CD_TP_INDIRIZZO_0075M, 
+DS_TP_INDIRIZZO_0075M, 
+PAGAM,
+IM_SOMMA_ASSICURATA_0050F,
+sum(case when rischi gt 0 then tariffa_ann else 0 end) as tariffa_ann,  
+sum(case when rischi gt 0 then sconti_ann else 0 end) as sconti_ann,
+sum(case when rischi gt 0 then dir_fraz_ann else 0 end) as dir_fraz_ann, 
+sum(case when rischi gt 0 then gwp_ann else 0 end) as gwp_ann, 
+sum(case when rischi gt 0 then gwp else 0 end) as gwp,
+sum(rischi) as rischi,
+sum(EP) as EP,
+sum(caus_attr_N) as caus_attr_N,
+sum(caus_tot_N) as caus_tot_N,
+sum(carico_attr_N) as carico_attr_N,
+sum(carico_tot_N) as carico_tot_N,
+sum(caus_attr_N1) as caus_attr_N1,
+sum(caus_tot_N1) as caus_tot_N1,
+sum(carico_attr_N1) as carico_attr_N1,
+sum(carico_tot_N1) as carico_tot_N1,
+sum(caus_attr_N2) as caus_attr_N2,
+sum(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+from merge_temp_&i.
+where (calculated FLG_KEEP)=1 
+group by 1,2,3,4,5,6,7,8,9,10,
+	11,12,13,14,15,16,17,18,19,20,
+	21,22,23,24,25,26,27,28,29,30,
+	31,32,33,34,35,36,37,38,39,40,
+	41,42,43,44,45,46,47;
+quit;
+
+/* calcolo dei flag di produzione */
+proc sql;
+create table DB_FIN_&label_out._&&annoN&i.._&periodo_interruz_cy. as select
+*,
+(case when  data_prima_emissione lt"31Dec&&annoN&i1.:0:0:0"dt then 1
+	else 0 end) as STOCK_E,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0 then 1
+	else 0 end) as NB,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0  then gwp
+	else 0 end) as gwp_NB,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0  then ep
+	else 0 end) as ep_NB,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0  then rischi
+	else 0 end) as rischi_NB,
+(case when   data_prima_emissione gt "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0  then carico_attr_N
+	else 0 end) as carico_attr_N_NB,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0 then carico_tot_N
+	else 0 end) as carico_tot_N_NB,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0 then caus_attr_N
+	else 0 end) as caus_attr_N_NB,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 0 then caus_tot_N
+	else 0 end) as caus_tot_N_NB,
+(case when   data_prima_emissione ge "31Dec&&annoN&i1.:0:0:0"dt and data_prima_emissione lt "&data_interruz.:0:0:0"dt and flg_sostituente eq 1  then 1
+	else 0 end) as sostituenti,
+(case when data_annullamento lt "&data_interruz.:0:0:0"dt and data_annullamento gt "31Dec&&annoN&i1.:0:0:0"dt
+				and causa_annullamento in ("Sostituzione") then 1
+	else 0 end) as sostituite,
+(case when   data_annullamento lt "&data_interruz.:0:0:0"dt and data_annullamento gt "31Dec&&annoN&i1.:0:0:0"dt
+				and causa_annullamento in ("Storno per trasferimento", "Storno per vendita", "Storno per distruzione", "Storno per furto", "Storno per esportazione") then 1
+	else 0 end) as stornate,
+(case when   data_annullamento lt "&data_interruz.:0:0:0"dt and data_annullamento gt "31Dec&&annoN&i1.:0:0:0"dt
+				and causa_annullamento in ("Storno per disdetta online", "Storno per disdetta") then 1
+	else 0 end) as disdette,
+(case when   data_annullamento lt "&data_interruz.:0:0:0"dt and data_annullamento gt "31Dec&&annoN&i1.:0:0:0"dt
+				and causa_annullamento in ("Storno per insolvenza") then 1
+	else 0 end) as annullate_x_insolvenza,
+(case when   data_annullamento lt "&data_interruz.:0:0:0"dt and data_annullamento gt "31Dec&&annoN&i1.:0:0:0"dt
+				and causa_annullamento not in ("Sostituzione",
+					"Storno per trasferimento", "Storno per vendita", "Storno per distruzione", "Storno per furto", "Storno per esportazione",
+					"Storno per disdetta online", "Storno per disdetta",
+					"Storno per insolvenza") then 1
+	else 0 end) as annullate_altri_motivi,
+(case when causa_annullamento not in ("ATTIVA") and data_annullamento gt data_ultima_scadenza and data_annullamento ge "&data_interruz.:0:0:0"dt and data_ultima_scadenza le "&data_interruz.:0:0:0"dt  then 1
+	else 0 end) as stornate_postume,
+(case when causa_annullamento in ("ATTIVA") and data_ultima_scadenza le "&data_interruz.:0:0:0"dt  then 1
+	else 0 end) as false_attive,
+(case when  data_annullamento gt "&data_interruz.:0:0:0"dt and data_ultima_scadenza ge "&data_interruz.:0:0:0"dt then 1
+	else 0 end) as attive
+from gruppo_&label_out._&i. (drop=FLG_KEEP);
+quit;
+
+
+
+/* pulizia passi intermedi */
+proc datasets lib=work;
+delete 
+elab_&label_out._&i. 
+gruppo_&label_out._&i.
+sin_&label_out._&i._&periodo_VISTA_SIN._4merge
+merge_temp_&i.;
+run;
+%end;
+
+%mend;
+
+
+
+
+
+
+
+
+

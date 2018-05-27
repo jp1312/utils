@@ -1,0 +1,279 @@
+
+/******************* GLM Freq causata *************************************/
+%LET n_mod=Numcaus;
+
+proc datasets library=rcampsas;
+delete parameters_&n_mod. Modelfit_&n_mod. Modelinf_&n_mod. type_1&n_mod. type_3&n_mod.;
+run;
+
+
+PROC GENMOD DATA=rcampsas.REG_FC;
+		
+CLASS 	  
+	anno
+	CLA_PROV_AXAMPS_FC
+	CLA_PROF_AXAMPS_FC
+	CLA_ETA_P_AXAMPS_FC
+	CLA_SINPREG_NOSIN_FC
+	CLA_BM_FC
+	CLA_ETA_V_AXA_FC
+	CLA_MAR_AXAMPS_FC	
+	CLA_CVALKW_AXA2_FC
+	CLA_FRAZ_AXAMPS_FC
+	CLA_MAX_AXAMPS_FC
+	CLA_ETA_AXAMPS_FC
+
+	/ order=freq desc;
+
+	MODEL num_causati_n1 =  
+	anno
+	CLA_PROV_AXAMPS_FC
+	CLA_PROF_AXAMPS_FC
+	CLA_ETA_P_AXAMPS_FC
+	CLA_SINPREG_NOSIN_FC
+	CLA_BM_FC
+	CLA_ETA_V_AXA_FC
+	CLA_MAR_AXAMPS_FC	
+	CLA_CVALKW_AXA2_FC
+	CLA_FRAZ_AXAMPS_FC
+	CLA_MAX_AXAMPS_FC
+	CLA_ETA_AXAMPS_FC/ 
+	
+			NOINT LINK=LOG DIST=POISSON /*SCALE=PEARSON*/ TYPE1 TYPE3 
+			 /*CORRB COVB*/ ALPHA=0.05 /*WALD*/ WALDCI OFFSET=LG_VEIC;
+
+ods output ParameterEstimates=rcampsas.parameters_&n_mod.;
+ods output Modelfit= rcampsas.Modelfit_&n_mod.;
+ods output Modelinfo=rcampsas.Modelinf_&n_mod.;
+ods output type1=rcampsas.type_1&n_mod.;
+ods output type3=rcampsas.type_3&n_mod.;
+
+  /* output out=Diagnostics pred=Pred resraw=ResRaw reschi=ResChi resdev=ResDev
+	stdreschi=StdResChi stdresdev=StdResDev; */ 
+RUN;
+/********************************* Fine glm Freq causata ***************************/
+
+
+
+
+
+
+
+
+/******************* GLM Freq subita *************************************/
+%LET n_mod=Numgest;
+
+PROC GENMOD DATA=rcampsas.REG_FS;		
+CLASS 	  
+	anno
+	CLA_PROV_AXAMPS_FS
+	CLA_PROF_AXAMPS_FS
+	/*CLA_ETA_P_AXAMPS_FS*/
+	CLA_SINPREG_NOSIN_FS
+	CLA_BM_FS
+	CLA_ETA_V_AXA_FS
+	CLA_MAR_AXAMPS_FS	
+	CLA_CVALKW_AXA2_FS
+	CLA_FRAZ_AXAMPS_FS
+	CLA_MAX_AXAMPS_FS
+	CLA_ETA_AXAMPS_FS 
+/ order=freq desc;
+
+	MODEL num_subiti_n1 =  
+	anno
+	CLA_PROV_AXAMPS_FS
+	CLA_PROF_AXAMPS_FS
+	/*CLA_ETA_P_AXAMPS_FS*/
+	CLA_SINPREG_NOSIN_FS
+	CLA_BM_FS
+	CLA_ETA_V_AXA_FS
+	CLA_MAR_AXAMPS_FS	
+	CLA_CVALKW_AXA2_FS
+	CLA_FRAZ_AXAMPS_FS
+	CLA_MAX_AXAMPS_FS
+	CLA_ETA_AXAMPS_FS 
+/ 
+			NOINT LINK=LOG DIST=POISSON /*SCALE=PEARSON*/ TYPE1 TYPE3 
+			 /*CORRB COVB*/ ALPHA=0.05 /*WALD*/ WALDCI OFFSET=LG_VEIC;
+ods output ParameterEstimates=rcampsas.parameters_&n_mod.;
+ods output Modelfit= rcampsas.Modelfit_&n_mod.;
+ods output Modelinfo=rcampsas.Modelinf_&n_mod.;
+ods output type1=rcampsas.type_1&n_mod.;
+ods output type3=rcampsas.type_3&n_mod.;
+/*  output out=Diagnostics pred=Pred resraw=ResRaw reschi=ResChi resdev=ResDev
+	stdreschi=StdResChi stdresdev=StdResDev; */
+RUN;
+/********************************* Fine glm Freq subita ***************************/
+
+
+
+
+/******************* GLM Costo causato *************************************/
+%LET n_mod=costocaus;
+
+proc datasets library=rcampsas;
+delete parameters_&n_mod. Modelfit_&n_mod. Modelinf_&n_mod. type_1&n_mod. type_3&n_mod.;
+run;
+
+
+PROC GENMOD DATA=rcampsas.REG_CC2;		
+CLASS 	
+	anno
+	CLA_PROV_AXAMPS_CC
+	CLA_PROF_AXAMPS_CC
+	/*CLA_ETA_P_AXAMPS_CC*/
+	CLA_SINPREG_NOSIN_CC
+	CLA_BM_CC
+	CLA_ETA_V_AXA_CC
+	CLA_MAR_AXAMPS_CC	
+	CLA_CVALKW_AXA2_CC
+	CLA_FRAZ_AXAMPS_CC
+	CLA_MAX_AXAMPS_CC
+	CLA_ETA_AXAMPS_CC 
+/ order=freq desc;
+
+	MODEL costo_causato_cap100 =  
+	anno
+	CLA_PROV_AXAMPS_CC
+	CLA_PROF_AXAMPS_CC
+	/*CLA_ETA_P_AXAMPS_CC*/
+	CLA_SINPREG_NOSIN_CC
+	CLA_BM_CC
+	CLA_ETA_V_AXA_CC
+	CLA_MAR_AXAMPS_CC	
+	CLA_CVALKW_AXA2_CC
+	CLA_FRAZ_AXAMPS_CC
+	CLA_MAX_AXAMPS_CC
+	CLA_ETA_AXAMPS_CC /	 NOINT LINK=LOG DIST=GAMMA TYPE1 TYPE3 ALPHA=0.05 WALDCI; 
+
+	WEIGHT num_causati_n1;
+
+ods output ParameterEstimates=rcampsas.parameters_&n_mod.;
+ods output Modelfit=rcampsas.Modelfit_&n_mod.;
+ods output Modelinfo=rcampsas.Modelinf_&n_mod.;
+ods output type1=rcampsas.type_1&n_mod.;
+ods output type3=rcampsas.type_3&n_mod.;
+
+/*  output out=Diagnostics pred=Pred resraw=ResRaw reschi=ResChi resdev=ResDev
+	stdreschi=StdResChi stdresdev=StdResDev; */
+RUN;
+
+/********************************* Fine glm Costo causato ***************************/
+
+
+
+
+
+
+
+
+
+/******************* GLM Costo subito *************************************/
+%LET n_mod=costosub;
+
+proc datasets library=rcampsas;
+delete parameters_&n_mod. Modelfit_&n_mod. Modelinf_&n_mod. type_1&n_mod. type_3&n_mod.;
+run;
+
+PROC GENMOD DATA=rcampsas.REG_CS;		
+CLASS 	  
+	anno
+	CLA_PROV_AXAMPS_CS
+	CLA_PROF_AXAMPS_CS
+	/*CLA_ETA_P_AXAMPS_CS*/
+	CLA_SINPREG_NOSIN_CS
+	CLA_BM_CS
+	CLA_ETA_V_AXA_CS
+	CLA_MAR_AXAMPS_CS	
+	CLA_CVALKW_AXA2_CS
+	CLA_FRAZ_AXAMPS_CS
+	CLA_MAX_AXAMPS_CS
+	CLA_ETA_AXAMPS_CS 
+/ order=freq desc;
+
+	MODEL costo_subito_cap100 =  
+	anno
+	CLA_PROV_AXAMPS_CS
+	CLA_PROF_AXAMPS_CS
+	/*CLA_ETA_P_AXAMPS_CS*/
+	CLA_SINPREG_NOSIN_CS
+	CLA_BM_CS
+	CLA_ETA_V_AXA_CS
+	CLA_MAR_AXAMPS_CS	
+	CLA_CVALKW_AXA2_CS
+	CLA_FRAZ_AXAMPS_CS
+	CLA_MAX_AXAMPS_CS
+	CLA_ETA_AXAMPS_CS / 
+	NOINT LINK=LOG DIST=GAMMA TYPE1 TYPE3 ALPHA=0.05 WALDCI;
+	WEIGHT num_subiti_n1;
+
+ods output ParameterEstimates=rcampsas.parameters_&n_mod.;
+ods output Modelfit= rcampsas.Modelfit_&n_mod.;
+ods output Modelinfo=rcampsas.Modelinf_&n_mod.;
+ods output type1=rcampsas.type_1&n_mod.;
+ods output type3=rcampsas.type_3&n_mod.;
+
+/*  output out=Diagnostics pred=Pred resraw=ResRaw reschi=ResChi resdev=ResDev
+	stdreschi=StdResChi stdresdev=StdResDev; */
+RUN;
+
+/********************************* Fine glm Costo subito ***************************/
+
+
+
+
+
+
+
+
+
+/******************* GLM Forf gestito *************************************/
+%LET n_mod=forfaitgest;
+
+proc datasets library=rcampsas;
+delete parameters_&n_mod. Modelfit_&n_mod. Modelinf_&n_mod. type_1&n_mod. type_3&n_mod.;
+run;
+
+PROC GENMOD DATA=RCAMPSAS.REG_FG;		
+CLASS 	  
+	anno
+	CLA_PROV_AXAMPS_FG
+	/*CLA_PROF_AXAMPS_FG
+	CLA_ETA_P_AXAMPS_FG
+	CLA_SINPREG_NOSIN_FG
+	CLA_BM_FG
+	CLA_ETA_V_AXA_FG
+	CLA_MAR_AXAMPS_FG	
+	CLA_CVALKW_AXA2_FG
+	CLA_FRAZ_AXAMPS_FG
+	CLA_MAX_AXAMPS_FG
+	CLA_ETA_AXAMPS_FG */
+/ order=freq desc;
+
+	MODEL COSTO_FORF_GEST =  
+	anno
+	CLA_PROV_AXAMPS_FG
+	/*CLA_PROF_AXAMPS_FG
+	CLA_ETA_P_AXAMPS_FG
+	CLA_SINPREG_NOSIN_FG
+	CLA_BM_FG
+	CLA_ETA_V_AXA_FG
+	CLA_MAR_AXAMPS_FG	
+	CLA_CVALKW_AXA2_FG
+	CLA_FRAZ_AXAMPS_FG
+	CLA_MAX_AXAMPS_FG
+	CLA_ETA_AXAMPS_FG */ / NOINT LINK=LOG DIST=GAMMA TYPE1 TYPE3 ALPHA=0.05 WALDCI;
+
+	WEIGHT num_subiti_n1;
+
+ods output ParameterEstimates=rcampsas.parameters_&n_mod.;
+ods output Modelfit= rcampsas.Modelfit_&n_mod.;
+ods output Modelinfo=rcampsas.Modelinf_&n_mod.;
+ods output type1=rcampsas.type_1&n_mod.;
+ods output type3=rcampsas.type_3&n_mod.;
+
+/*  output out=Diagnostics pred=Pred resraw=ResRaw reschi=ResChi resdev=ResDev
+	stdreschi=StdResChi stdresdev=StdResDev; */
+RUN;
+
+/********************************* Fine glm Costo forf gestito ***************************/

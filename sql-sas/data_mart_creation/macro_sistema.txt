@@ -1,0 +1,64 @@
+
+
+%macro test_univoco(db=&syslast.,vars=);
+proc sql noprint;
+select count(*) 
+into :count_ini
+from &db.;
+%put &count_ini.;
+
+%let all= ;
+%let nvar = %sysfunc(countw(&vars.,' '));
+%put &nvar.;
+
+%do i = 1 %to &nvar.;
+
+%let var_&i.= %scan(&vars., &i., ' ');
+%put &&var_&i.;
+
+%if &all.= %then %do;
+	%if &i. ne &nvar. %then %do; %let all=&&var_&i.,; %put &all.; %end;
+	%else %do; %let all=&&var_&i.; %put &all.; %end;
+%end;
+%else %do;
+%if &i. ne &nvar. %then %do; %let all=&all.&&var_&i.,; %put &all.; %end;
+%else %do; %let all=&all.&&var_&i.; %put &all.; %end; 
+%end;
+%end;
+
+create table check_univ as select distinct
+&all.
+from &db.;
+
+select count(*) 
+into :count_fin
+from check_univ;
+quit;
+
+%if &count_fin. ne &count_ini. %then %do;
+%let nrows=%sysfunc(sum(&count_ini.,-&count_fin.));
+%put WARNING: La tabella non è univoca per le variabili indicate !! Ci sono &nrows. record duplicati ! ;
+%end;
+%else %do;
+%let nrows=&count_fin.;
+%put NOTE: Ok... la tabella è univoca per le variabili indicate, vai sereno! Ci sono &nrows. record univoci..;
+%end;
+
+proc datasets library=work nodetails;
+delete check_univ;
+run;
+%mend;
+
+
+%macro check_empty;
+PROC sql noprint;
+SELECT COUNT(*) into :RowCnt
+FROM &syslast.
+quit;
+%if &RowCnt. eq 0 %then %do;
+%put WARNING: La tabella è vuota !!;
+%end;
+%else %do;
+%put NOTE: Ok... la tabella non è vuota.. ;
+%end;
+%mend;

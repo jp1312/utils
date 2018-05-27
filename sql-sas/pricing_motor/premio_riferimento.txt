@@ -1,0 +1,196 @@
+
+%macro sim(p_ref1,p_ref2,p_ref3,p_ref4,p_ref5);
+
+data sim_new;
+set rcampsas.db_coef;
+
+
+/* veicanno 1*/
+PREMIO_100_new=100*veicanno*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+PREMIO_100_old=100*veicanno*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+PREMIO_fab_old=665.35*veicanno*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+PREMIO_fab_new=583.51*veicanno*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+if 979.00*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*	coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar gt 3090 then PREMIO_rif_C_old=3090*veicanno; else				
+PREMIO_rif_C_old= 979.00*veicanno*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*	coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+if &p_ref1*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar gt 3090 then PREMIO_rif_C_new=3090*veicanno; else				
+PREMIO_rif_C_new = &p_ref1 * veicanno*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+
+
+
+/* veicanno2 */
+PREMIO_100_new2=100*veicanno2*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+PREMIO_100_old2=100*veicanno2*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+PREMIO_fab_old2=665.35*veicanno2*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+PREMIO_fab_new2=583.51*veicanno2*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+if 979.00*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*	coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar gt 3090 then PREMIO_rif_C_old2=3090*veicanno2; else				
+PREMIO_rif_C_old2= 979.00*veicanno2*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*	coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+if &p_ref2*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar gt 3090 then PREMIO_rif_C_new2=3090*veicanno2; else				
+PREMIO_rif_C_new2=&p_ref2*veicanno2*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+
+
+/* veicanno3 */
+PREMIO_100_new3=100*veicanno3*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+PREMIO_100_old3=100*veicanno3*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+PREMIO_fab_old3=665.35*veicanno3*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+PREMIO_fab_new3=583.51*veicanno3*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+if 979.00*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*	coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar gt 3090 then PREMIO_rif_C_old3=3090*veicanno3; else				
+PREMIO_rif_C_old3=979.00*veicanno3*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+if &p_ref3*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar gt 3090 then PREMIO_rif_C_new3=3090*veicanno3; else				
+PREMIO_rif_C_new3 = &p_ref3*veicanno3*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+
+
+/* veicanno4 */
+premio_100_new4=100*veicanno4*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+premio_100_old4=100*veicanno4*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+premio_fab_old4=665.35*veicanno4*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+premio_fab_new4=583.51*veicanno4*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+if 979.00*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*	coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar gt 3090 then premio_rif_C_old4=3090*veicanno4; else				
+premio_rif_C_old4=979.00*veicanno4*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+if &p_ref4*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar gt 3090 then premio_rif_C_new4=3090*veicanno4; else				
+premio_rif_C_new4= &p_ref4 * veicanno4*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+
+/* veicanno5 */
+premio_100_new4=100*veicanno5*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+premio_100_old4=100*veicanno5*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+premio_fab_old5=665.35*veicanno5*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+premio_fab_new5=583.51*veicanno5*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+if 979.00*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*	coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar gt 3090 then premio_rif_C_old5=3090*veicanno5; else				
+premio_rif_C_old5=979.00*veicanno5*coef_old_eta*coef_old_bm*coef_old_prof*coef_old_max*coef_old_sin*coef_old_fraz*coef_old_eta_p*coef_old_eta_v*coef_old_prov*coef_old_cval*coef_old_kw*coef_old_mar;
+
+if &p_ref5*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar gt 3090 then premio_rif_C_new5=3090*veicanno5; else				
+premio_rif_C_new5= &p_ref5 * veicanno5*coef_new_eta*coef_new_bm*coef_new_prof*coef_new_max*coef_new_sin*coef_new_fraz*coef_new_eta_p*coef_new_eta_v*coef_new_prov*coef_new_cvalkw*coef_new_mar;
+
+
+where nbafn=1;
+
+RUN;
+
+%mend;
+
+
+/*%sim(977.00,1050.75,977.00,1150.75);*/
+%sim(1008.00,1050.75,981,981,1150.75);
+
+
+
+
+
+
+proc sql;
+create table confronto as select
+
+	comp,
+	anno,	
+	CLA_PROV_AXAMPS,
+	CLA_PROF_AXAMPS,
+	CLA_ETA_P_AXAMPS,
+	CLA_SINPREG_NOSIN,
+	CLA_BM,
+	CLA_ETA_V_AXA,
+	CLA_MAR_AXAMPS,	
+	CLA_CVALKW_AXA2,
+	CLA_FRAZ_AXAMPS,
+	CLA_MAX_AXAMPS,
+	CLA_ETA_AXAMPS,
+
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(VEICANNO3) as VEICANNO3 format commax30.2,
+sum(VEICANNO4) as VEICANNO4 format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO_N1) as FORFAIT_DEBITORI_CARICO format commax30.2,
+sum(FORFAIT_GESTITI_CARICO_N1) as FORFAIT_GESTITI_CARICO format commax30.2,
+sum(NUMSIN_N1) as NUMSIN format commax30.2,
+sum(NUM_CAUSATI_N1) as num_causati format commax32.2,
+sum(NUM_SUBITI_N1) as num_subiti format commax32.2,
+sum(FD_N1) as num_deb format commax30.2,
+sum(CG_N1) as num_gest format commax30.2,
+sum(NC_N1) as num_RCA format commax30.2,
+sum(GESTITI_CARICO_N1) as gestiti_carico format commax30.2,
+sum(RCA_CARICO_N1) as rca_carico format commax30.2,
+sum(CARICO_TOT_N1) as carico_tot format commax30.2,
+sum(CARICO_TOT_CAP100_N1) as carico_tot_cap100 format commax30.2,
+sum(CARICO_SUBITO_CAP100_N1) as costo_subito_cap100 format commax30.2,
+sum(CARICO_CAUSATO_CAP100_N1) as costo_causato_cap100 format commax30.2	,
+
+sum(PREMIO_rif_C_new) as ep_rif_C_new format commax30.2,
+sum(PREMIO_rif_C_old) as ep_rif_C_old format commax30.2,
+sum(PREMIO_100_new) as ep_100_new format commax30.2,
+sum(PREMIO_100_old) as ep_100_old format commax30.2,
+sum(PREMIO_fab_old) as ep_fab_old format commax30.2,
+sum(PREMIO_fab_new) as ep_fab_new format commax30.2,
+
+sum(PREMIO_rif_C_new3) as ep_rif_C_new3 format commax30.2,
+sum(PREMIO_rif_C_old3) as ep_rif_C_old3 format commax30.2,
+sum(PREMIO_100_new3) as ep_100_new3 format commax30.2,
+sum(PREMIO_100_old3) as ep_100_old3 format commax30.2,
+sum(PREMIO_fab_old3) as ep_fab_old3 format commax30.2,
+sum(PREMIO_fab_new3) as ep_fab_new3 format commax30.2,
+
+sum(PREMIO_rif_C_new4) as ep_rif_C_new4 format commax30.2,
+sum(PREMIO_rif_C_old4) as ep_rif_C_old4 format commax30.2,
+sum(PREMIO_100_new4) as ep_100_new4 format commax30.2,
+sum(PREMIO_100_old4) as ep_100_old4 format commax30.2,
+sum(PREMIO_fab_old4) as ep_fab_old4 format commax30.2,
+sum(PREMIO_fab_new4) as ep_fab_new4 format commax30.2
+
+from sim_new
+group by 1,2,3,4,5,6,7,8,9,10,11,12,13;
+quit;
+
+
+
+
+/* UTILIZZATA ! */
+proc sql;
+create table vvv as select 1,
+sum(ep_fab_new)/(sum(veicanno)*583.51) as coeff_comp format commax30.4,
+sum(ep_rif_C_new)-(sum(veicanno)*583.51) as fabb_diff format commax30.,
+583.51/(sum(ep_fab_new)/(sum(veicanno)*583.51)) as p_ref format commax30.2
+from confronto
+where anno=2013
+group by 1;
+quit;
+
+
+
+
+/*
+ 
+proc sql;
+create table vvv3 as select 1,
+sum(ep_fab_new3)/(sum(veicanno3)*583.51) as coeff_comp format commax30.4,
+sum(ep_rif_C_new3)-(sum(veicanno3)*583.51) as fabb_diff format commax30.,
+583.51/(sum(ep_fab_new3)/(sum(veicanno3)*583.51)) as p_ref format commax30.2
+from confronto
+group by 1;
+quit;
+
+
+
+proc sql;
+create table vvv4 as select 1,
+sum(ep_fab_new4)/(sum(veicanno4)*583.51) as coeff_comp format commax30.4,
+sum(ep_rif_C_new4)-(sum(veicanno4)*583.51) as fabb_diff format commax30.,
+583.51/(sum(ep_fab_new4)/(sum(veicanno4)*583.51)) as p_ref format commax30.2
+from confronto
+group by 1;
+quit;
+
+*/

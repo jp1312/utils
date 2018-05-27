@@ -1,0 +1,212 @@
+/*
+%let db_cy=WORK.R_CY_GP_2015_201503;
+%let db_py=WORK.R_PY_GP_2014_201403;
+%let vars=;
+*/
+
+%macro raccolta(db_cy=,db_py=,db_py_fy=,vars=,label_fin=);
+
+%let all=PRODOTTO, anno, mese, periodo, LoB;
+%let all_a=a.PRODOTTO, a.anno, a.mese, a.periodo, a.LoB;
+%let all_join=a.PRODOTTO=b.PRODOTTO and a.LoB=b.LoB;
+
+%let nvar = %sysfunc(countw(&vars.,' '));
+
+%do k = 1 %to &nvar.;
+%let var_&k.= %upcase(%scan(&vars., &k., ' '));
+%if &k. ne &nvar. %then %do; 
+	%let all=&all. , &&var_&k.; 
+	%let all_a=&all_a. , a.&&var_&k.; 
+	%let all_join=&all_join. AND a.&&var_&k.=b.&&var_&k.; 
+%end;
+%else %do; 
+	%let all=&all. , &&var_&k.; 
+	%let all_a=&all_a. , a.&&var_&k.; 
+	%let all_join=&all_join. AND a.&&var_&k.=b.&&var_&k.; 
+%end; 
+%end;
+
+proc sql;
+create table kpi_cy as select
+&all.,
+stock_e format=best32. as 'STOCK E'n,
+NB format=best32. as NB,
+sum(-sostituenti,sostituite,stornate,disdette,annullate_x_insolvenza,annullate_altri_motivi,
+	stornate_postume) format=best32. as ANNULLATE,
+attive format=best32. as ATTIVE,
+sum(NB,sostituenti,-sostituite,-stornate,-disdette,-annullate_x_insolvenza,
+	-annullate_altri_motivi,-stornate_postume)/attive format=best32.2 as NNI,
+sum(-sostituenti,sostituite,stornate,disdette,annullate_x_insolvenza,
+	annullate_altri_motivi,stornate_postume)/sum(stock_e) format=best32.2 as CANCELLATION,
+tariffa_ann format=best32. as 'TARIFFA ANN'n,
+sconti_ann/tariffa_ann format=best32.2 as SCONTO,
+gwp format=best32. as GWP,
+gwp_NB format=best32. as 'GWP NB'n,
+rischi format=best32. as RISCHI,
+rischi_nb format=best32. as 'RISCHI NB'n,
+ep format=best32. as EP,
+ep/rischi format=best32. as PM,
+ep_NB/rischi_NB format=best32. as 'PM NB'n,
+caus_tot_N format=best32. as NSIN,
+caus_attr_N format=best32. as 'NSIN ATTR'n,
+carico_tot_N format=best32. as CARICO,
+carico_attr_N format=best32. as 'CARICO ATTR'n,
+caus_tot_N/rischi format=best32.2 as FREQ,
+caus_tot_N_NB/rischi_NB format=best32.2 as 'FREQ NB'n,
+carico_tot_n/caus_tot_n format=best32. as CM,
+carico_attr_n/caus_attr_n format=best32. as 'CM ATTR'n,
+carico_tot_n/ep format=best32.2 as 'S/P d/d'n, 
+carico_tot_n_NB/ep_NB format=best32.2 as 'S/P d/d NB'n, 
+carico_attr_n/ep format=best32.2 as 'S/P d/d ATTR'n,
+carico_attr_n_nb/ep_nb format=best32.2 as 'S/P d/d ATTR NB'n
+from &db_cy.;
+quit;
+
+proc sql;
+create table kpi_py as select
+&all.,
+stock_e format=best32. as 'STOCK E'n,
+NB format=best32. as NB,
+sum(-sostituenti,sostituite,stornate,disdette,annullate_x_insolvenza,annullate_altri_motivi,
+	stornate_postume) format=best32. as ANNULLATE,
+attive format=best32. as ATTIVE,
+sum(NB,sostituenti,-sostituite,-stornate,-disdette,-annullate_x_insolvenza,
+	-annullate_altri_motivi,-stornate_postume)/attive format=best32.2 as NNI,
+sum(-sostituenti,sostituite,stornate,disdette,annullate_x_insolvenza,
+	annullate_altri_motivi,stornate_postume)/sum(stock_e) format=best32.2 as CANCELLATION,
+tariffa_ann format=best32. as 'TARIFFA ANN'n,
+sconti_ann/tariffa_ann format=best32.2 as SCONTO,
+gwp format=best32. as GWP,
+gwp_NB format=best32. as 'GWP NB'n,
+rischi format=best32. as RISCHI,
+rischi_nb format=best32. as 'RISCHI NB'n,
+ep format=best32. as EP,
+ep/rischi format=best32. as PM,
+ep_NB/rischi_NB format=best32. as 'PM NB'n,
+caus_tot_N format=best32. as NSIN,
+caus_attr_N format=best32. as 'NSIN ATTR'n,
+carico_tot_N format=best32. as CARICO,
+carico_attr_N format=best32. as 'CARICO ATTR'n,
+caus_tot_N/rischi format=best32.2 as FREQ,
+caus_tot_N_NB/rischi_NB format=best32.2 as 'FREQ NB'n,
+carico_tot_n/caus_tot_n format=best32. as CM,
+carico_attr_n/caus_attr_n format=best32. as 'CM ATTR'n,
+carico_tot_n/ep format=best32.2 as 'S/P d/d'n, 
+carico_tot_n_NB/ep_NB format=best32.2 as 'S/P d/d NB'n, 
+carico_attr_n/ep format=best32.2 as 'S/P d/d ATTR'n,
+carico_attr_n_nb/ep_nb format=best32.2 as 'S/P d/d ATTR NB'n
+from &db_py.;
+quit;
+
+proc sql;
+create table kpi_py_fy as select
+&all.,
+stock_e format=best32. as 'STOCK E'n,
+NB format=best32. as NB,
+sum(-sostituenti,sostituite,stornate,disdette,annullate_x_insolvenza,annullate_altri_motivi,
+	stornate_postume) format=best32. as ANNULLATE,
+attive format=best32. as ATTIVE,
+sum(NB,sostituenti,-sostituite,-stornate,-disdette,-annullate_x_insolvenza,
+	-annullate_altri_motivi,-stornate_postume)/attive format=best32.2 as NNI,
+sum(-sostituenti,sostituite,stornate,disdette,annullate_x_insolvenza,
+	annullate_altri_motivi,stornate_postume)/sum(stock_e) format=best32.2 as CANCELLATION,
+tariffa_ann format=best32. as 'TARIFFA ANN'n,
+sconti_ann/tariffa_ann format=best32.2 as SCONTO,
+gwp format=best32. as GWP,
+gwp_NB format=best32. as 'GWP NB'n,
+rischi format=best32. as RISCHI,
+rischi_nb format=best32. as 'RISCHI NB'n,
+ep format=best32. as EP,
+ep/rischi format=best32. as PM,
+ep_NB/rischi_NB format=best32. as 'PM NB'n,
+caus_tot_N format=best32. as NSIN,
+caus_attr_N format=best32. as 'NSIN ATTR'n,
+carico_tot_N format=best32. as CARICO,
+carico_attr_N format=best32. as 'CARICO ATTR'n,
+caus_tot_N/rischi format=best32.2 as FREQ,
+caus_tot_N_NB/rischi_NB format=best32.2 as 'FREQ NB'n,
+carico_tot_n/caus_tot_n format=best32. as CM,
+carico_attr_n/caus_attr_n format=best32. as 'CM ATTR'n,
+carico_tot_n/ep format=best32.2 as 'S/P d/d'n, 
+carico_tot_n_NB/ep_NB format=best32.2 as 'S/P d/d NB'n, 
+carico_attr_n/ep format=best32.2 as 'S/P d/d ATTR'n,
+carico_attr_n_nb/ep_nb format=best32.2 as 'S/P d/d ATTR NB'n
+from &db_py_fy.;
+quit;
+
+proc sql;
+CREATE table riep_cy_delta_py as select
+&all_a.,
+a.'STOCK E'n,
+
+a.NB,
+a.NB/b.NB-1 format=best32.2 as 'Delta NB PY'n,
+a.ANNULLATE,
+a.ATTIVE,
+a.NNI,
+a.NNI/b.NNI-1 format=best32.2 as 'Delta NNI PY'n,
+a.CANCELLATION,
+a.CANCELLATION/b.CANCELLATION-1 format=best32.2 as 'Delta CANCELLATION PY'n,
+a.'TARIFFA ANN'n,
+a.SCONTO,
+a.GWP,
+a.GWP/b.GWP-1 format=best32.2 as 'Delta GWP PY'n,
+a.'GWP NB'n,
+a.'GWP NB'n/b.'GWP NB'n-1 format=best32.2 as 'Delta GWP NB PY'n,
+a.RISCHI,
+a.'RISCHI NB'n,
+a.EP,
+a.PM,
+a.'PM NB'n,
+a.NSIN,
+a.'NSIN ATTR'n,
+a.CARICO,
+a.'CARICO ATTR'n,
+a.FREQ,
+a.'FREQ NB'n,
+a.FREQ/b.FREQ-1 format=best32.2 as 'Delta FREQ PY'n,
+a.CM,
+a.'CM ATTR'n,
+a.'CM ATTR'n/b.'CM ATTR'n-1 format=best32.2 as 'Delta CM ATTR PY'n,
+a.'S/P d/d'n, 
+a.'S/P d/d NB'n,
+a.'S/P d/d'n/b.'S/P d/d'n-1 format=best32.2 as 'Delta S/P d/d PY'n,
+a.'S/P d/d ATTR'n,
+a.'S/P d/d ATTR NB'n,
+a.'S/P d/d ATTR'n/b.'S/P d/d ATTR'n-1 format=best32.2 as 'Delta S/P d/d ATTR PY'n
+from kpi_cy as a left join kpi_py as b
+on &all_join.;
+quit;
+
+
+/* ricodifico missing values */ 
+data &label_fin._CY;
+set riep_cy_delta_py;
+array a(*) _numeric_;
+do i=1 to dim(a);
+if a(i) = . then a(i) = 0;
+end;
+drop i;
+run;
+
+/* ricodifico missing values */ 
+data &label_fin._PY;
+set kpi_py_fy;
+array a(*) _numeric_;
+do i=1 to dim(a);
+if a(i) = . then a(i) = 0;
+end;
+drop i;
+run;
+
+
+proc datasets lib=work;
+delete
+kpi_cy
+kpi_py
+kpi_py_fy
+riep_cy_delta_py;
+run;
+
+
+%mend;

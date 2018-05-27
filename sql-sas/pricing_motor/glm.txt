@@ -1,0 +1,58 @@
+
+
+/******************* GLM run1 Freq causata *************************************/
+PROC GENMOD DATA=RCAMPSAS.db_axa_axamps_fin;
+		
+CLASS 	  
+	anno
+	CLA_PROV_AXAMPS
+	CLA_PROF_AXAMPS
+	CLA_ETA_P_AXAMPS
+	CLA_SINPREG_NOSIN
+	CLA_BM
+	CLA_ETA_V_AXA
+	CLA_MAR_AXAMPS	
+	CLA_CVALKW_AXA2
+	CLA_FRAZ_AXAMPS
+	CLA_MAX_AXAMPS
+	CLA_ETA_AXAMPS2/ order=freq desc;
+
+	MODEL num_causati_n1 =  
+
+	anno
+	CLA_PROV_AXAMPS
+	CLA_PROF_AXAMPS
+	CLA_ETA_P_AXAMPS
+	CLA_SINPREG_NOSIN
+	CLA_BM
+	CLA_ETA_V_AXA
+	CLA_MAR_AXAMPS	
+	CLA_CVALKW_AXA2
+	CLA_FRAZ_AXAMPS
+	CLA_MAX_AXAMPS
+	CLA_ETA_AXAMPS2 / 
+	
+			/*NOINT*/ LINK=LOG	DIST=POISSON /*SCALE=PEARSON*/ TYPE1 TYPE3 
+			 CORRB COVB ALPHA=0.05 /*WALD*/ WALDCI OFFSET=log(veicanno);
+
+	/*lsmestimate exp;
+	contrast 'Constraint1' CLA_FRAZ 1 0 0 ;*/ 
+
+
+	ods output ParameterEstimates= parameters;
+	ods output Modelfit= Modelfit;
+	ods output ModelInfo= Modelinf;
+	ods output Type1= type1;
+	ods output Type3= type3;
+	ods output CorrB= CorrB;
+	ods output CovB= CovB;
+	ods output ConvergenceStatus = ConvergenceStatus;
+	ods output ParmInfo = ParmInfo; 
+
+/*
+	output out=Diagnostics pred=Pred resraw=ResRaw reschi=ResChi resdev=ResDev
+	stdreschi=StdResChi stdresdev=StdResDev; */
+
+	RUN;
+
+/********************************* fine glm run 1 ***************************/

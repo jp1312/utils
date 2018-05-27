@@ -1,0 +1,53 @@
+
+
+ods graphics on;
+proc genmod data=dati.motorins plots(only)=resraw plots(only)=predicted;
+class Kilometres /*(param=ref ref='1')*/ make /*(param=ref ref='1')*/; 
+/* se avessi numeriche poosso metterle direttamente nello statement model */
+model claims= Kilometres make nauto / 
+	dist=poisson 
+	link=log 
+	type1 
+	type3 
+	offset=log_insured
+	scale=pearson;
+title "Poisson with scale estimated, offset and no weight";
+run;
+ods graphics off;
+
+
+
+ods graphics on;
+proc genmod data=dati.motorins plots(only)=resraw plots(only)=predicted;
+class Kilometres make; 
+model claims= Kilometres make nauto / 
+	dist=poisson 
+	link=log 
+	type1 
+	type3 
+	offset=log_insured
+	scale=pearson;
+weight log_insured;
+title "Poisson with scale estimated, offset and weight (log insured)";
+run;
+ods graphics off;
+
+
+ods graphics on;
+proc genmod data=dati.motorins plots(only)=resraw plots(only)=predicted;
+class Kilometres make; 
+model claims= Kilometres make nauto / 
+	dist=poisson 
+	link=log 
+	type1 
+	type3 
+	offset=log_insured
+	scale=pearson;
+weight insured;
+title "Poisson with scale estimated, offset and weight (log insured)";
+run;
+ods graphics off;
+
+
+
+

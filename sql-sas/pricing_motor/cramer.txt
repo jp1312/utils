@@ -1,0 +1,170 @@
+/*
+PROC SQL;
+   CREATE TABLE work1 AS 
+   SELECT * 
+      FROM RCAMPSAS.DB_AXA_AXAMPS_FIN
+      WHERE COMP = 'AXA' AND prodotto IN ('AP','PAV');
+QUIT; */
+
+
+
+
+
+%macro correlaz;
+%let variab= 
+	CLA_PROV_AXAMPS
+	CLA_PROF_AXAMPS
+	CLA_ETA_P_AXAMPS
+	CLA_ANNI_NOSIN_AXA
+	CLA_SIN_AXA
+	CLA_BM
+	CLA_ETA_V_AXA
+	CLA_MAR_AXAMPS	
+	CLA_CVAL_AXAMPS
+	CLA_KW_AXAMPS
+	CLA_FRAZ_AXAMPS
+	CLA_MAX_AXAMPS
+	CLA_ETA_AXAMPS2;
+                             
+%do correl=1 %to 13;
+%do i=1 %to 13;
+proc freq data = RCAMPSAS.DB_AXA_AXAMPS_FIN;
+weight VEICANNO;
+tables %scan(&variab,&correl)*%scan(&variab,&i) /chisq  noprint ;
+output out=Out_&correl._V&i chisq ;
+where VEICANNO>0;
+run;
+%end;
+%end;
+%mend;
+%correlaz;
+
+
+
+
+
+
+
+%macro vai; proc datasets library=Work;
+delete cramer ;
+run;
+
+%let variab= 
+	CLA_PROV_AXAMPS
+	CLA_PROF_AXAMPS
+	CLA_ETA_P_AXAMPS
+	CLA_ANNI_NOSIN_AXA
+	CLA_SIN_AXA
+	CLA_BM
+	CLA_ETA_V_AXA
+	CLA_MAR_AXAMPS	
+	CLA_CVAL_AXAMPS
+	CLA_KW_AXAMPS
+	CLA_FRAZ_AXAMPS
+	CLA_MAX_AXAMPS
+	CLA_ETA_AXAMPS2;
+                   
+%do i=1  %to 13;
+  %do j=1 %to 13;
+  data t_Out_&i._V&j;
+  set Out_&i._V&j;
+   Var1="%scan(&variab,&i)";
+   Var2="%scan(&variab,&j)";
+  run;
+proc append data=t_Out_&i._V&j out=cramer force; run;
+%end;
+%end;
+%mend;
+
+%vai;
+
+
+proc sort data=cramer;
+by descending _cramv_;
+run;
+
+/*************************************** fine 1 ********************/
+
+
+
+
+
+
+
+
+
+
+
+
+/******************************************* inizio 2 ********************/
+
+%macro correlaz;
+%let variab= 
+	CLA_PROV_AXAMPS
+	CLA_PROF_AXAMPS
+	CLA_ETA_P_AXAMPS
+	CLA_SINPREG_NOSIN
+	CLA_BM
+	CLA_ETA_V_AXA
+	CLA_MAR_AXAMPS	
+	CLA_CVALKW_AXA2
+	CLA_FRAZ_AXAMPS
+	CLA_MAX_AXAMPS
+	CLA_ETA_AXAMPS2;
+                             
+%do correl=1 %to 11;
+%do i=1 %to 11;
+proc freq data = RCAMPSAS.DB_AXA_AXAMPS_FIN;
+weight VEICANNO;
+tables %scan(&variab,&correl)*%scan(&variab,&i) /chisq  noprint ;
+output out=Out_&correl._V&i chisq ;
+where VEICANNO>0;
+run;
+%end;
+%end;
+%mend;
+%correlaz;
+
+
+
+
+
+
+
+%macro vai; proc datasets library=Work;
+delete cramer ;
+run;
+
+%let variab= 
+	CLA_PROV_AXAMPS
+	CLA_PROF_AXAMPS
+	CLA_ETA_P_AXAMPS
+	CLA_SINPREG_NOSIN
+	CLA_BM
+	CLA_ETA_V_AXA
+	CLA_MAR_AXAMPS	
+	CLA_CVALKW_AXA2
+	CLA_FRAZ_AXAMPS
+	CLA_MAX_AXAMPS
+	CLA_ETA_AXAMPS2;
+
+%do i=1  %to 11;
+  %do j=1 %to 11;
+  data t_Out_&i._V&j;
+  set Out_&i._V&j;
+   Var1="%scan(&variab,&i)";
+   Var2="%scan(&variab,&j)";
+  run;
+proc append data=t_Out_&i._V&j out=cramer force; run;
+%end;
+%end;
+%mend;
+
+%vai;
+
+
+proc sort data=cramer;
+by descending _cramv_;
+run;
+
+/*************************************** fine 2 *********************************/

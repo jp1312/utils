@@ -1,0 +1,1284 @@
+
+/* raccolta script corso Macro language 1 16 Ottobre 2014 */
+/**********************************************************/
+
+
+/* Windows/UNIX */
+
+/* STEP 1: Notice the default values for the %LET statements. */
+
+/* STEP 2: If your files are not to be located in S:\workshop */
+/* change the value of PATH= %LET statement to */
+/* reflect your data location. */
+
+/* STEP 3:	Submit the program to create the course data files. */
+
+/* STEP 4: Go to the Results-SAS Report tab in Enterprise Guide*/
+/* or the Results Viewer in SAS and verify the CONTENTS procedure*/
+/* report lists the names of the SAS data sets that were created.*/
+
+
+%let path=C:\MAC1;
+
+/*+++++++++++++++++++++++++++++++++++++++++++++*/
+/* Alternate Data Locations                                        */
+/* DO NOT CHANGE THE FOLLOWING CODE UNLESS     */
+/* DIRECTED TO DO SO BY YOUR INSTRUCTOR.       */
+/*+++++++++++++++++++++++++++++++++++++++++++++*/
+
+*%let path=s:\workshop\mac1;
+*%let path=c:\workshop\mac1;
+*%let path=c:\SAS_Education\mac1;
+
+
+
+
+/*+++++++++++++++++++++++++++++++++++++++++++++*/
+/* WARNING: DO NOT ALTER CODE BELOW THIS LINE */
+/* UNLESS DIRECTED TO DO SO BY YOUR INSTURCTOR.*/
+/*+++++++++++++++++++++++++++++++++++++++++++++*/
+
+   %include "&path\setup.sas" ;
+
+
+/* Z/OS */
+
+/*+++++++++++++++++++++++++++++++++++++++++*/
+/* For Z/OS Comment out the three statements below.*/
+/* Uncomment the following statements for Z/OS and */
+/* follow the steps in comments above to set up */
+/* the Z/OS data environment. */
+/* Recommended SAS DATA library location: prefix.workshop.sasdata */
+/* The setup process will use SASDATA as the third level */
+
+*%let path=.workshop;
+
+/*+++++++++++++++++++++++++++++++++++++++++++++*/
+/* WARNING: DO NOT ALTER CODE BELOW THIS LINE */
+/*++++++++++++++++++++++++++++++++++++++++++++*/
+
+*%include "&path..sascode(setup)";
+
+
+
+* m101e02;
+ 
+%put NOTE- Is this a SAS note?;
+%put WARNING: Is this a SAS warning?;
+%put ERROR: Is this a SAS error?;
+%put error: Is this a SAS error?;
+
+
+
+
+/* Global macro variables */
+
+%put &SYSTIME &SYSUSERID; 
+%put &SYSUSERID;
+%put &SYSDATE;
+%put &SYSDATE9;
+%put &SYSSCP;
+/* macro automatic variables, come tutte le macro variables sono solo testo!! quindi se voglio confrontare sisdate con uuna data devo oprima riformattare sysdate!*/
+
+%put _AUTOMATIC_;
+%let ciccio=ciao;
+%put _ALL_;
+
+%put Today is &SYSDAY;
+%put &=SYSDAY;
+
+
+/* ricorda il doppio apice !!! */
+proc freq data=orion.Customer;
+table Country / nocum;
+footnote "Created &Systime &sysday";
+run;
+
+
+/* stampa l'ultimo dataset creato */
+proc print data=&syslast;
+run;
+
+
+/* per stampare l'ampersand senza trattarlo come un token dei macro */
+%put R&D;
+
+proc sort data=orion.continent out=ciao;
+by Continent_Name;
+run;
+
+proc print data=ciao;
+run;
+
+data new;
+set orion.continent;
+run;
+
+%put &syslast;
+
+
+
+
+*m102e04;
+
+title; 
+footnote; 
+
+proc print data=orion.employee_payroll(where=(Employee_Hire_Date between '1JAN2007'd and "&sysdate"d));
+   format Birth_Date Employee_Hire_Date date9.;
+run;
+
+/* i could have used today() instead, or input("&sysdate9",date9.) */
+
+
+
+/* le variabili defnite dall'utente con il let possono essere costanti, ma anche 
+altre macro variabili per esempio  */
+
+%let x=varlist;
+%let &x=name age height;
+
+
+%let prva=%eval(2+3);
+%put &prva;
+
+
+
+
+
+/* usare numeri con i let */
+%let units=4;
+
+proc print data=orion.continent(where=(Oss=4));
+run;
+
+
+/* importante ! */
+
+%let office=Sidney;
+
+/* 
+a. where City=&office; qui non valuta sidney come una stringa ma come una variabile.. quindi occhio! 
+b. where City='&office'; qui la macro non viene valutata e il valore costante che otteniamo è &office
+c. where City="&office"; qui il valore che restituisce è sidney! corretto
+*/
+
+
+options symbolgen; /* utile per stampare immediatamente il risultato delle macro.. prima del run o quit ! */
+
+
+/* cancellare macro variabili definite dall'utente */
+%let x=ciao;
+%put _USER_;
+
+%symdel x;
+%put _USER_;
+
+
+
+
+*m102d05a;
+
+data orders;
+	set orion.Orders;
+	where year(Order_Date)=2011;
+	Lag=Delivery_Date - Order_Date;
+run;
+
+proc means data=orders maxdec=2 min max mean;
+	class Order_Type;
+	var Lag;
+	title "Report based on ORDERS data";
+run;
+
+
+
+*m102d05a;
+
+data orders;
+	set orion.Orders;
+	where year(Order_Date)=2011;
+	Lag=Delivery_Date - Order_Date;
+run;
+
+proc means data=orders maxdec=2 min max mean;
+	class Order_Type;
+	var Lag;
+	title "Report based on ORDERS data";
+run;
+
+
+
+*m102e05;
+
+title; 
+footnote; 
+
+proc print data=orion.customer_dim;
+   var Customer_Name Customer_Gender Customer_Age;
+   where Customer_Group contains 'Gold';
+   title 'Gold Customers';
+run; 
+
+
+
+
+%let type=Internet;
+
+
+options symbolgen;
+title; 
+footnote; 
+
+proc print data=orion.customer_dim;
+   var Customer_Name Customer_Gender Customer_Age;
+   where Customer_Group contains "&type";
+   title "&type Customers";
+run; 
+
+
+
+*m102e06;
+
+title; 
+footnote; 
+
+%let type=Gold;
+%let age1=30;
+%let age2=45;
+
+proc print data=orion.customer_dim;
+   var Customer_Name Customer_Gender Customer_Age;
+   where Customer_Group contains "&type" and
+	Customer_Age between &age1 and &age2;
+   title "&type Customers";
+run;
+
+options nosymbolgen;
+
+
+*m102e07;
+
+title; 
+footnote; 
+
+%let pet1=Paisley;
+%let pet2=Sitka;
+%put _USER_;
+
+%symdel pet1 pet2;
+%put _USER_;
+
+
+
+/* delimiting macro variables */
+
+*m102e08;
+
+title; 
+footnote; 
+
+proc print data=orion.organization_dim;
+   where Employee_Hire_Date='01AUG2006'd;
+   id Employee_ID;
+   var Employee_Name Employee_Country Employee_Hire_Date;
+   title 'Personal Information for Employees Hired in AUG 2006';
+run;
+
+title; 
+
+%let year=2006;
+%let month=Aug;
+
+proc print data=orion.organization_dim;
+   where Employee_Hire_Date="01&month.&year."d;
+   id Employee_ID;
+   var Employee_Name Employee_Country Employee_Hire_Date;
+   title "Personal Information for Employees Hired in &month. &year.";
+run;
+
+
+
+*m102e09;
+
+title; 
+footnote; 
+
+proc print data=orion.organization_dim;
+   id Employee_ID;
+   var Employee_Name Employee_Country Employee_Gender;
+   title 'Listing of All Employees From Orion.Organization_Dim';
+run;
+
+title; 
+
+
+%let dsn=Organization;
+%let var=Employee;
+
+title; 
+footnote; 
+
+proc print data=orion.&dsn._dim;
+   id &var._ID;
+   var  &var._Name &var._Country &var._Gender;
+   title "Listing of All &var.s From Orion.&dsn._Dim";
+run;
+
+title; 
+
+
+
+
+*m102e10;
+
+title; 
+footnote; 
+
+proc sort data=orion.staff out=staffhires;
+   by Job_Title Emp_Hire_Date;
+run;
+
+data FirstHired;   
+   set staffhires;
+   by Job_Title;
+   if First.Job_Title;  
+run;
+
+proc print data=FirstHired;
+   id Job_Title;
+   var Employee_ID Emp_Hire_Date;
+   title "First Employee Hired within Each Job Title";  
+run;
+
+
+%let sel=Last;
+title; 
+footnote; 
+
+proc sort data=orion.staff out=staffhires;
+   by Job_Title Emp_Hire_Date;
+run;
+
+data &sel.Hired;   
+   set staffhires;
+   by Job_Title;
+   if &sel..Job_Title;  
+run;
+
+proc print data=&sel.Hired;
+   id Job_Title;
+   var Employee_ID Emp_Hire_Date;
+   title "&sel. Employee Hired within Each Job Title";  
+run;
+
+proc print data=&syslast.;
+   id Job_Title;
+   var Employee_ID Emp_Hire_Date;
+   title "&sel. Employee Hired within Each Job Title";  
+run;
+
+
+
+/* se voglio ignorare l'ampersand ! */
+%put %nrstr(R&D);
+
+
+
+
+
+/* IMPORTANTE !!!! --- open space code --- per esempio voglio stampare il valore 2 ecc.
+per eseguire funzioni fuori da passi di data o proc ecc. devo usare funzioni macro 
+%substr %scan ecc. 
+utilissime anche per eseguire funzioni all'interno di stirnghe!! anche se sono dentro un passo di data infatti le f
+funzioni normali non funzionerebbero!
+*/
+
+
+
+/* %scan splitta stringhe secondo uno specificato delimiter
+se per esempio ho una stringa str=work.orders.year
+%scan(str,2,.) mi restituisce orders
+%scan(str,1,.) mi restituisce work
+%scan(str,3,.) mi restituisce year
+
+
+
+/* %eval() utile oltre che per operazioni aritmetiche anche per valutare
+frasi boolenae..
+pensa ad esmepio 
+if %eval(&anno>2009) then ...
+
+
+
+/* SYSFUNC è importantissima !!!! 
+permette di valutare funzioni sas.. sempre in ottica open code... */
+
+
+proc print data=&syslast.;
+   id Job_Title;
+   var Employee_ID Emp_Hire_Date;
+   title "%sysfunc(today(),weekdate.)";  
+run;
+
+/* propcase è carina. mette la maiuscola solo alla prima lettera di una stringa..*/
+
+%let statement=%nrstr(title "S&P 500";);
+%put &statement;
+
+
+
+
+/* esercizio */
+
+%let fullname=Anthony Miller;
+%put &fullname;
+
+%let short_name=%substr(&fullname.,1,1). %scan(&fullname,2);
+%put &short_name;
+
+%put %sysfunc(today(),date10);
+
+
+
+
+*m102e13;
+
+%let d=&sysdate9; 
+%let t=&systime;
+
+proc print data=orion.product_dim;
+   where Product_Name contains "Jacket";
+   var Product_Name Product_ID Supplier_Name;
+   title1 "Product Names Containing 'Jacket'";
+   title2 "Report produced &t &d";
+run;
+
+
+
+
+*m102e13;
+
+%let d=&sysdate9; 
+%let t=&systime;
+%let dept=%nrstr(R&D);
+
+
+proc print data=orion.product_dim;
+   where Product_Name contains "&dept";
+   var Product_Name Product_ID Supplier_Name;
+   title1 "Product Names Containing '&dept'";
+   title2 "Report produced &t &d";
+run;
+
+;
+
+%let my_birth=13Dec1988;
+%put _ALL_;
+%put &my_birth;
+%put %substr(&my_birth.,1,2);
+
+
+
+
+/* chapter 3 */
+
+/* le macro vengono stored in work.sasmacr per default
+
+options mcompilenote=ALL /* default =NONE 
+
+a macro call doesn't need a semicolon after */
+
+
+proc contents cat=work.sasmacr;
+title "mY temporsary macto";
+quit;
+
+
+
+/* to save permanently macros */
+options mstored sasmstore=orion;
+%macro time / store source;
+
+/* in questo modo posso richiamare le macro salvate in sessioni diverse *
+ricordandosi sempre di dar el opzioni 
+options mstored... nella nuova sessione che apriamo */
+
+
+
+/* options mprint serve per stampare il codice generato dal una chiamata ad una macro.. */
+
+
+/*le macro possono contenere anche solamente SAS partial code, come l'esempio che segue */
+
+%macro clac;
+proc means data=
+%mend calc;
+
+%calc
+orion.continents; 
+
+
+/* controlla opzione di debug nei passi di data ecc. / debug */
+
+
+
+
+/* m103e01 */
+
+title; 
+footnote; 
+
+proc print data=orion.customer_dim;
+   var Customer_Group Customer_Name Customer_Gender Customer_Age;
+   where Customer_Group contains "&type";
+   title "&type Customers";
+run;
+
+
+options mprint mcompilenote=ALL;
+%let type=Internet;
+
+%macro customers;
+proc print data=orion.customer_dim;
+   var Customer_Group Customer_Name Customer_Gender Customer_Age;
+   where Customer_Group contains "&type";
+   title "&type Customers";
+run;
+%mend customers;
+
+%customers
+
+
+
+*m103e02;
+
+%macro tut;
+   king tut
+%mend tut;
+
+%sysmacdelete tut;
+
+%put %sysfunc(today(),TIMEAMPM);
+
+
+%macro Currtime;
+%sysfunc(today(),TIMEAMPM);
+%mend;
+
+
+
+
+*m103e03;
+
+proc print data=orion.customer_dim(obs=10);
+   var Customer_Name Customer_Group;
+	title 'Customer List';
+	title2 %currtime;
+run;
+
+
+
+/* parametri per macro: positional, keyword, mixed */
+
+/* positional.. you know */
+
+/* keyword */
+%macro count(opts=nocum,start=01jan08,stop=31dec08);
+proc freq ... ecc.
+%mend;
+
+%count() /* usa i valori di default ...*/
+%count(stop=01jul08,opts=nocum nopercent) /* update il valore di stop e quello di opts mentre usa il start di defulat ! */
+
+
+
+
+
+*m103e04;
+
+title; 
+footnote; 
+
+%macro customers;
+   proc print data=orion.customer_dim;
+      var Customer_Name Customer_Gender Customer_Age;
+      where Customer_Group contains "&type";
+      title "&type Customers";
+   run;
+%mend customers;
+
+
+%macro customers(type=Club);
+   proc print data=orion.customer_dim;
+      var Customer_Name Customer_Gender Customer_Age;
+      where Customer_Group contains "&type";
+      title "&type Customers";
+   run;
+%mend customers;
+
+options mprint mcompilenote=ALL ;
+%customers
+
+
+*m103e05;
+
+options nolabel;
+title 'Order Stats';
+proc means data=orion.order_fact maxdec=2 mean ;
+   var total_retail_price;
+   class order_type;
+run;
+title;
+
+
+
+
+%macro stats(statistics=N,dec=2,var=total_retail_price,class=order_type);
+title 'Order Stats';
+proc means data=orion.order_fact maxdec=&dec. &statistics. ;
+   var &var.;
+   class &class.;
+run;
+%mend;
+
+options mprint mcompilenote=ALL;
+
+%stats(statistics=N NMISS MEAN MAX,var=total_retail_price costprice_per_unit,class=order_type quantity);
+
+
+
+
+
+
+
+
+
+
+
+/*+++++++++++*/
+/* CHAPTER 4 */
+/*+++++++++++*/
+
+
+/**************************************************/
+/* Paragraph 4.1 - creating macros in a data step */
+/*************************************************/
+
+
+
+/* STATEMENT END -- molto ultile
+
+data ciccio;
+set pippo end=final;
+blala blal;
+run;
+
+final è una variabile che vale sempre 0 tranne che per l'ultima osservazione ! */
+
+
+/* RETAIN (IMPLICITO ED ESPLICITO) -- MOLTO UTILE PER CREARE CONTATORI CUMULATI CONDIZIONALI
+
+if type=1 then number+1 (è un retain esplicito..per creare somme cumulative condizionate..)
+altrimenti scrivevo esplicitamente Number=Number+1; ratain Number 0; (attenzione allo zero dopo il retain è importante per inizializzare il valore di 
+number a 0 altrimenti rimane missing e missing+1=missing ! */
+
+ 
+
+/* CALL SYMPUTX
+problema: le variabili macro sono valutate da un processore separato  (parallelo) a quello principale..
+quindi se utilizzo dei %let in un passo di data potrei avere dei problemi..
+soluzione:: CALL SYMPUTX -- che fa si che le macro variabili siano valutate all'interno dei passi di data e non nel macro processor
+call symputx prende sempre due parametri: nome macro variable e rispettivo valore! 
+
+se calcolo una variabile tramite un passo di data (es. un conteggio a partire da una tabella)
+e vogli osalvare quel valore in una variabile globale (che posso riutilizzare in altre procedure ecc.)
+potrei utilizzare %LET, ma è molto rischioso, data la non sincronizzazione fra il processore
+macro e quello input stack. quindi meglio utilizzare call symputx che genera una macro ma a livello runtime ! */
+
+
+/* data _NULL_;
+set pippo
+serve per processare un dataset senza crearne un altro */
+
+
+/* 
+PUT legge una variabile con un formato specificato. 
+PUTN idem, ma specifica per formati numerici (utilizzabile all'interno di %sysfunc)
+INPUT converte una variabile in un formato specificato 
+*/
+
+
+
+
+*m104e01;
+
+%let job=Analyst;
+
+data staff;
+   keep employee_ID job_title salary gender;
+   set orion.staff;
+   amount=amount+salary;
+   count=count+1;
+   retain amount 0 count 0;
+   where job_title contains "&job";
+   call symputx('avg',put(amount/count,dollar10.));
+run;
+
+%put &avg.;
+
+proc print data=staff;
+	sum salary;
+   title "&job Staff";
+   footnote "Average &job. salary &avg.";
+run;
+
+title;
+footnote;
+
+
+
+* m104e02;
+
+title; 
+footnote; 
+
+*part a;
+
+/* nway è un'opzione per calcolare la somma solo al livello piu granulare
+nel caso avessi piu variabili in class */
+
+
+proc print data=orion.order_fact;
+run;
+
+proc means data=orion.order_fact sum; 
+   var Total_Retail_Price;
+   class Customer_ID;
+   output out=customer_sum sum=CustTotalPurchase;
+run;
+
+proc sort data=customer_sum;
+   by /*descending*/ CustTotalPurchase;
+run;
+
+data _NULL_;
+set customer_sum end=final;
+if final=1 then call symputx('top',customer_ID);
+run;
+
+proc print data=customer_sum(drop=_type_);
+run;
+ 
+
+*part b;
+
+proc print data=orion.orders noobs;
+   var Order_ID Order_Type Order_Date Delivery_Date;
+   where customer_id=&top.;
+run;
+
+
+
+
+
+
+/* m104e03 */
+title; 
+footnote; 
+
+proc means data=orion.order_fact nway noprint; 
+   var Total_Retail_Price;
+   class Customer_ID;
+   output out=customer_sum sum=CustTotalPurchase;
+run;
+
+proc sort data=customer_sum ;
+   by descending CustTotalPurchase;
+run;
+
+proc print data=customer_sum(drop=_type_);
+run;
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Paragraph 4.2 - indirect references to macro variables */
+
+/* di norma, per scrivere codice efficiente nei passi d idata si dovrebbe sempre aggiungere la 
+where clause (filtra le righe) e il keep (filtra le colonne) */
+
+/* quando concateno con || usare left() pe ril secondo termine se non voglio spazio
+fra le due parole */
+
+
+/* indirect references to macro variables
+double &&
+
+
+/* SYMGET fa quello che fa SYMPUTX ma al contrario ! */
+
+
+
+
+/* m104e04 */
+title; 
+footnote; 
+
+data _NULL_;
+set orion.customer_type;
+keep customer_type_id customer_type;
+call symputx("type"||left(customer_type_id),customer_type);
+run;
+
+%put _USER_;
+
+%macro memberlist(id=2030);
+   %put _user_;
+   title "A List of &&type&id";
+   proc print data=orion.customer;
+      var Customer_Name Customer_ID Gender;
+      where Customer_Type_ID=&id;
+   run;
+%mend memberlist;
+
+%memberlist()
+
+
+
+/* m104e05 */
+title; 
+footnote; 
+
+data _null_;
+   set orion.customer_type;
+   call symputx('type'||left(Customer_Type_ID), Customer_Type);
+run;
+
+%put _user_;
+
+
+
+%macro memberlist(num=2010);
+   proc print data=orion.customer_dim;
+      var Customer_Name Customer_ID Customer_Age_Group;
+      where Customer_Type="&&type&num";
+      title "A List of &&type&num";
+   run;
+%mend memberlist;
+
+%memberlist()
+
+
+proc print data=orion.country;
+run;
+
+
+
+
+
+
+/* Paragraph 4.3 - creating macro in sql */
+ 
+/* la clusola INTO !!! */
+proc sql;
+select sum(total), sum(ioio), sum(klk) 
+into :total, :sum, :ciccio
+from orion
+where age>39;
+quit;
+
+
+/* la clusola INTO !!! */
+proc sql outobs=3 double;
+select price_k, date_k 
+into :price1-:price3, :date1-:date3
+from orion
+where age>39
+order by price;
+quit;
+
+
+
+/* la clusola INTO !!! */
+proc sql noprint;
+select distinct country 
+into :countries separated by ','
+from orion;
+quit;
+
+/* pensa ad esmempio che potresti usare questa unica macro variabile che contiene tutti i nomi
+dei paese separati da una virgola con uno 
+scan(macrovrb,1,",")
+scan(macrovrb,2,",")
+ecc. per ottenere tutti i nomi dei paesi..*/
+
+
+
+proc sql flow;
+select name, value
+from /* sashelp.vtables */ dictionary.macros
+where scope='GLOBAL'
+order by name;
+quit;
+
+
+
+
+/* la library sampsrc contiene esempi di tabelle -- utile ! */
+proc sql flow;
+select *
+from sampsrc.Auspop;
+quit;
+
+
+
+
+
+
+*m104e07;
+
+%let start=01Jan2011;
+%let stop=31Jan2011;
+
+proc means data=orion.order_fact noprint;
+   where order_date between "&start"d and "&stop"d;
+   var Quantity Total_Retail_Price;
+   output out=stats mean=Avg_Quant Avg_Price;
+   run;
+
+data _null_;
+   set stats;
+   call symputx('Quant',put(Avg_Quant,4.2));
+   call symputx('Price',put(Avg_Price,dollar7.2));
+run;
+
+proc print data=orion.order_fact noobs n;
+   where order_date between "&start"d and "&stop"d;
+   var Order_ID Order_Date Quantity Total_Retail_Price;
+   sum Quantity Total_Retail_Price;
+   format Total_Retail_Price dollar6.;
+   title1 "Report from &start to &stop";
+   title3 "Average Quantity: &quant";
+   title4 "Average Price: &price";
+run;
+
+proc print data=orion.order_fact;
+run;
+
+proc sql;
+select 
+mean(quantity) format=comma30.2,
+mean(total_retail_price) format=dollar10.2
+into :quant, :price 
+from orion.order_fact
+where order_date between "&start"d and "&stop"d;
+quit;
+
+proc print data=orion.order_fact noobs n;
+   where order_date between "&start"d and "&stop"d;
+   var Order_ID Order_Date Quantity Total_Retail_Price;
+   sum Quantity Total_Retail_Price;
+   format Total_Retail_Price dollar6.;
+   title1 "Report from &start to &stop";
+   title3 "Average Quantity: &quant";
+   title4 "Average Price: &price";
+run;
+
+
+
+
+
+/**********************/
+/****** CHAP 5 ********/
+/*********************/
+
+/* conditional macro */
+
+
+options mlogic;
+%macro reports;
+%daily
+%if &sysday=Friday %then %weekly;
+%mend reports;
+
+/* where %daily and %weekly sono due macro separate proc print che fanno dei report giornalieri e
+settimanali */
+
+
+/* usando %DO e %END si può fare in un'unica macro */
+
+/* un terzo metodo è usando %include "&path\daily.sas" ecc. dove in questo file .sas c'è il codice
+di cui abbiamo bisogno.. */
+
+%macro count(type=,start=01jan2010,stop=31jan2010)
+proc freq blablbala;
+%if &type= %then %do;
+title2 "For all order types";
+%end;
+%else %do;
+title2 "For &type" 
+where same and order_type=&type; /* qui same è importante perchè ho due where consecutivi che devono agire uno on-top sull'altro ! */
+%end;
+run;
+%mend;
+
+
+
+%macro cust(place);
+%let place=%upcase(&place); /* puo essere buona pratica aggiungere queesto pezzo quando si richiedono input dall'esterno agli utenti .. */
+data customers;
+set orion.customers;
+blablbabla;
+run;
+%mend;
+
+
+/* conditional one way or two-way */
+%macro counts(rows);
+proc freq data=orion.customers_dim;
+tables
+%if &rows ne %then &rows *;
+custoemr_gender;
+run;
+%mend;
+
+
+
+
+
+
+*m105e01.sas;
+
+%macro listing(custtype);
+	proc print data=orion.customer noobs;
+	%if &custtype eq %then %do;
+	var customer_ID customer_name Customer_type_ID;
+	title "All customers";
+	%end;
+	%ELSE %DO;
+	var customer_ID customer_name;
+	where  Customer_type_ID=&custtype;
+	title "Customer type &custtype";
+	%end;
+run;
+%mend listing;
+
+%listing(2010)
+%listing()
+
+
+
+
+*m105e02;
+
+%macro day;
+	%if &sysday=Friday  
+		%then %put Yes;
+		%else %put Sorry;
+%mend day;
+
+options mlogic symbolgen;
+
+%day
+
+
+
+
+
+*m105e03;
+
+%macro where(state);
+	%if %str(&state)=%str(OR)
+		%then %put Oregon;
+		%else %put Wherever;
+%mend where;
+
+%where(CA)
+%where(OR)
+
+/* lezione imparata: se si richiede un input dall'esterno sarebbe bene sempre valutarlo 
+nella mcro prima con %str() o con %nstr() per evitare di incorrere in carateeri speciali..
+omonimie.. */
+
+
+/ minoperator /* questa opzione va aggiunta per utilizzare l'in operand all'interno di una  macro */
+
+
+
+%macro customers(place) /minoperator;
+proc sql;
+select distinct country into :list separated by ' '
+from orion.customer;
+quit;
+%if &place in &list %then %do;
+proc print data=orion.customer;
+var customer_name customer_address country;
+where upcase(country)="&place";
+run;
+%end;
+%else %do;
+%put ERROR: No customers from &place..;
+%end;
+%mend;
+
+
+
+/* %return è un exit dal codice ! come exit in vba */
+
+
+
+
+
+*m105e04;
+
+options nomlogic;
+%macro custtype(type) / minoperator;
+   %let type=%upcase(&type);
+   %IF &type= %THEN %DO;
+   %PUT ERROR: Missing type;
+   %PUT ERROR: Valid values are gold and internet;
+	%END;
+	%ELSE %DO;
+	%LET &type=%UPCASE(&type);
+   	%IF &type in GOLD INTERNET %THEN %DO;
+    proc print data=orion.customer_dim;
+       var Customer_Group Customer_Name Customer_Gender  
+           Customer_Age;
+       where upcase(Customer_Group) contains "&type";
+       title "&type Customers";
+    run;
+	%END;
+	%ELSE %DO;
+	%PUT ERROR: &type is not a valid type;
+	%END; %END;
+%mend custtype;
+
+%custtype(internet)
+%custtype(interne)
+%custtype()
+
+
+
+
+*m105e05;
+
+%macro listing(custtype) / minoperator ;
+   %if &custtype= %then %do;
+		proc print data=orion.customer noobs;
+   		var Customer_ID Customer_Name Customer_Type_ID;
+   		title "All Customers"; 
+		run;
+   %end;
+   %else %do;
+   		proc sql;
+		select distinct customer_type_id
+		into :list separated by ' ' 
+		from orion.customer;
+		quit;
+		%IF &custtype in &list %THEN %DO;
+		proc print data=orion.customer noobs;
+      	where Customer_Type_ID=&custtype;
+         var Customer_ID Customer_Name;
+         title "Customer Type: &custtype";
+      run; %END;
+	  %ELSE %DO;
+	%PUT ERROR: &custtype is not a valid customer type;
+	%end; %END;
+%mend listing;
+
+%listing(1020)
+%listing()
+%listing(9999)
+
+
+
+
+
+/*********************/
+/* ITERATIVE PROCESS */
+/********************/
+
+data _null_;
+set orion.country end=no_more;
+call symputx('Country'||left(_n_),country_name);
+if no_more then call symputx('numrows',_n_);
+run;
+
+%macro putloop;
+%do i=1 %to &numrows /*%BY 2*/;
+%put country&i is &&country&i;
+%end;
+%mend;
+
+
+
+%macro readrwa(first=2007,last=2010);
+%do year=&fisrt %to &last;
+data year&year;
+infile "&path\orders&year..dat";
+input order_ID order_type order_date : date9.;
+run;
+%mend;
+
+
+
+
+data AU CA DE;
+set orion.customer;
+select(country);
+when("AU") output AU;
+when("CA") output CA;
+when("DE") output DE;
+otherwise;
+end;
+run;
+
+
+
+
+
+*m105e07;
+
+title; 
+footnote; 
+
+*Parts a-b;
+proc means data=orion.order_fact sum mean maxdec=2;
+   where Order_Type=1;
+   var Total_Retail_Price CostPrice_Per_Unit;  
+   title "Summary Report for Order Type 1";
+run;
+
+*Parts c-d;
+data _null_;
+   set orion.lookup_order_type;
+run;
+
+
+
+
+
+%global MACRO-VARIABLE	/* FA DIVENTARE GLOBALE UNA MACRO LOCALE */
+%local /* idem al contrario */
+
+
+%macro numobs(lib,dsn);
+options nonotes;
+data _NULL_;
+call symputx('num',number9,'G'); /* l'opzione G manda la macro variabile nel Global */
+stop;
+set &lib..&dsn. nobs=number; /* in nobs è una var automatica on il numero di righe della tabella */
+run;
+%mend;
+
+%put &num. ; /* posso richiamre qusta variabile perchè ho messo l'opzione 'G';

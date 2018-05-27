@@ -1,0 +1,414 @@
+Sub Univariata_Massimale()
+
+' user inputs
+Dim year As String
+Dim desc_bene As String
+Dim vista As String
+
+
+'variables initialization
+
+
+desc_bene = Application.InputBox(Title:="Sector", Prompt:="Enter the sector within quotation")
+
+' desc_bene check
+
+'If desc_bene <> "autovettura" And desc_bene <> "motociclo" And desc_bene <> "ciclomotore" And desc_bene <> "rimorchio" And desc_bene <> "all" Then
+'MsgBox ("Entered Sector input is not valid, try to type again and always remember the quotation! Valid inputs are: ""autovettura"", ""motociclo"", ""ciclomotore"", ""rimorchio"" ")
+'Exit Sub
+'End If
+
+'If desc_bene = autovettura Or desc_bene = motociclo Or desc_bene = ciclomotore Or desc_bene = rimorchio Or desc_bene = all Then
+'MsgBox ("Entered Sector input is not valid, you have probably forgot the quotation!")
+'Exit Sub
+'End If
+
+year = Application.InputBox(Title:="Generation year", Prompt:="Enter generation year within quotation")
+
+' year check
+
+'If year <> 2012 And year <> 2013 Then
+'MsgBox ("Entered Generation Year input is not valid, try to type again and always remember the quotation! Valid inputs are: ""2012"" and ""2013"" ")
+'Exit Sub
+'End If
+
+
+'If year = 2012 Or year = 2013 Then
+'MsgBox ("Entered Generation Year input is not valid, you probably forgot the quotation!")
+'Exit Sub
+'End If
+
+
+vista = Application.InputBox(Title:="Vision year", Prompt:="Enter view without quotation, do not type anything for view N, type 1 for N+1")
+
+' vista check
+
+'If vista <> "" And vista <> 1 Then
+'MsgBox ("Entered Generation Year input is not valid, try to type again and remember DON'T put the quotation here! Valid inputs are: """" and ""1"" ")
+'Exit Sub
+'End If
+
+
+'If vista = "" Or year = "1" Then
+'MsgBox ("Entered Generation Year input is not valid, you probably entered the quotation, but you don't have to for this input!")
+'Exit Sub
+'End If
+
+
+
+
+'create names for columns
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.CreateNames Top:=True, Left:=False, Bottom:=False, Right:= _
+        False
+    
+    
+    
+   
+    ' Sheets.Add.Name = " Massimale " & desc_bene & " " & year & " " & vista & " "
+    ' Sheets(" Massimale " & desc_bene & " " & year & " " & vista & " ").Select
+    
+    
+    Sheets.Add.Name = "Massimale" & desc_bene & year & "N" & vista
+    Sheets("Massimale" & desc_bene & year & "N" & vista).Select
+
+    
+    
+    ' Add title
+    Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Univariate Massimale -" & " " & desc_bene & " " & "Generazione" & " " & year & " " & "vista" & " " & "N" & vista
+    
+    
+    Range("A4").Select
+    ActiveCell.FormulaR1C1 = "Massimale"
+    Range("A6").Select
+    ActiveCell.FormulaR1C1 = "3000000"
+    Range("A7").Select
+    ActiveCell.FormulaR1C1 = "6000000"
+    Range("A8").Select
+    ActiveCell.FormulaR1C1 = "12000000"
+    Range("A9").Select
+    ActiveCell.FormulaR1C1 = "25000000"
+    Range("A10").Select
+    ActiveCell.FormulaR1C1 = "Totale complessivo"
+    Range("B5").Select
+    ActiveCell.FormulaR1C1 = "Rischi"
+    Range("C5").Select
+    ActiveCell.FormulaR1C1 = "Rischi (%)"
+    Range("D5").Select
+    ActiveCell.FormulaR1C1 = "PM"
+    Range("E5").Select
+    ActiveCell.FormulaR1C1 = "Freq" & " " & "N" & vista
+    Range("F5").Select
+    ActiveCell.FormulaR1C1 = "CM" & " " & "N" & vista
+    Range("G5").Select
+    ActiveCell.FormulaR1C1 = "CM (Cap)" & " " & "N" & vista
+    Range("H5").Select
+    ActiveCell.FormulaR1C1 = "S/P" & " " & "N" & vista
+    Range("I5").Select
+    ActiveCell.FormulaR1C1 = "S/P (Cap)" & " " & "N" & vista
+    Range("I6").Select
+    
+    
+    
+    '------------------------
+    ' start write functions
+    ' -----------------------
+    
+        ' Rischi
+        Range("B6").Select
+        ActiveCell.FormulaR1C1 = _
+            "=+SUMIFS(Rischi,anno, " & year & ", DESC.BENE," & desc_bene & ",CLA_MAX,RC[-1])"
+          
+        Range("B7").Select
+        ActiveCell.FormulaR1C1 = _
+            "=+SUMIFS(Rischi,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-1])"
+            
+        Range("B8").Select
+        ActiveCell.FormulaR1C1 = _
+            "=+SUMIFS(Rischi,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-1])"
+        
+        Range("B9").Select
+        ActiveCell.FormulaR1C1 = _
+            "=+SUMIFS(Rischi,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-1])"
+        
+        Range("B10").Select
+        ActiveCell.FormulaR1C1 = _
+            "=+SUMIFS(Rischi,anno," & year & ",DESC.BENE," & desc_bene & ")"
+            
+        
+        ' Rischi (%)
+        Range("C6").Select
+        ActiveCell.FormulaR1C1 = "=+RC[-1]/R10C2"
+        Range("C7").Select
+        ActiveCell.FormulaR1C1 = "=+RC[-1]/R10C2"
+        Range("C8").Select
+        ActiveCell.FormulaR1C1 = "=+RC[-1]/R10C2"
+        Range("C9").Select
+        ActiveCell.FormulaR1C1 = "=+RC[-1]/R10C2"
+        Range("C10").Select
+        ActiveCell.FormulaR1C1 = "=+RC[-1]/R10C2"
+        
+        
+        
+    ' PM
+    Range("D6").Select
+    ActiveCell.FormulaR1C1 = _
+    "=+IFERROR(SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-3])/RC[-2],0)"
+    Range("D7").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-3])/RC[-2],0)"
+    Range("D8").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-3])/RC[-2],0)"
+    Range("D9").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-3])/RC[-2],0)"
+    Range("D10").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+SUMPRODUCT(R[-4]C:R[-1]C,R[-4]C[-2]:R[-1]C[-2])/SUM(R[-4]C[-2]:R[-1]C[-2])"
+    Range("D11").Select
+    
+    
+    
+    ' Freq
+    
+    Range("E6").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-4])/RC[-3],0)"
+    Range("E7").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-4])/RC[-3],0)"
+    Range("E8").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-4])/RC[-3],0)"
+    Range("E9").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-4])/RC[-3],0)"
+    Range("E10").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+SUMPRODUCT(R[-4]C:R[-1]C,R[-4]C[-3]:R[-1]C[-3])/SUM(R[-4]C[-3]:R[-1]C[-3])"
+    Range("E11").Select
+    
+    
+    
+    ' CM
+    Range("F6").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5]),0)"
+    Range("F7").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5]),0)"
+    Range("F8").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5]),0)"
+    Range("F9").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-5]),0)"
+    Range("F10").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ")/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & "),0)"
+    Range("F11").Select
+    
+    
+    
+    ' CM (Cap)
+    Range("G6").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6]),0)"
+    Range("G7").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6]),0)"
+    Range("G8").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6]),0)"
+    Range("G9").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6])/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-6]),0)"
+    Range("G10").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ")/SUMIFS(causatiN" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & "),0)"
+    Range("G11").Select
+    
+    
+    
+    ' S/P
+    Range("H6").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7]),0)"
+    Range("H7").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7]),0)"
+    Range("H8").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7]),0)"
+    Range("H9").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-7]),0)"
+    Range("H10").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ")/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & "),0)"
+    
+    
+    
+    
+    'S/P (Cap)
+    Range("I6").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8]),0)"
+    Range("I7").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8]),0)"
+    Range("I8").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8]),0)"
+    Range("I9").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8])/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & ",CLA_MAX,RC[-8]),0)"
+    Range("I10").Select
+    ActiveCell.FormulaR1C1 = _
+        "=+IFERROR(SUMIFS(carico_CAP_N" & vista & ",anno," & year & ",DESC.BENE," & desc_bene & ")/SUMIFS(ep,anno," & year & ",DESC.BENE," & desc_bene & "),0)"
+    Range("I11").Select
+
+    
+     
+    
+    ' formattazione foglio
+    
+Columns("A:A").EntireColumn.AutoFit
+    Range("A4").Select
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ThemeColor = 5
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ThemeColor = 5
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ThemeColor = 5
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ThemeColor = 5
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+    Range("A4").Select
+    Selection.Font.Bold = True
+    Range("A6:A9").Select
+    With Selection
+        .HorizontalAlignment = xlLeft
+        .VerticalAlignment = xlBottom
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+    Range("B5:I5").Select
+    Selection.Font.Bold = True
+    ActiveWindow.ScrollColumn = 1
+    Range("B6:B10").Select
+    Selection.Style = "Comma"
+    Selection.NumberFormat = "_-* #,##0.000_-;-* #,##0.000_-;_-* ""-""??_-;_-@_-"
+    Selection.NumberFormat = "_(* #,##0.00_);_(* (#,##0.00);_(* ""-""??_);_(@_)"
+    Selection.NumberFormat = "_-* #,##0.0_-;-* #,##0.0_-;_-* ""-""??_-;_-@_-"
+    Selection.NumberFormat = "_-* #,##0_-;-* #,##0_-;_-* ""-""??_-;_-@_-"
+    Range("C6:C10").Select
+    Selection.Style = "Percent"
+    Range("D6:D10").Select
+    Selection.Style = "Comma"
+    Selection.NumberFormat = "_-* #,##0.000_-;-* #,##0.000_-;_-* ""-""??_-;_-@_-"
+    Selection.NumberFormat = "_(* #,##0.00_);_(* (#,##0.00);_(* ""-""??_);_(@_)"
+    Selection.NumberFormat = "_-* #,##0.0_-;-* #,##0.0_-;_-* ""-""??_-;_-@_-"
+    Selection.NumberFormat = "_-* #,##0_-;-* #,##0_-;_-* ""-""??_-;_-@_-"
+    Range("E6:E10").Select
+    Selection.Style = "Percent"
+    Range("F6:F10").Select
+    Selection.Style = "Comma"
+    Range("G6:G10").Select
+    Selection.Style = "Comma"
+    Range("H6:I10").Select
+    Selection.Style = "Percent"
+    Range("A5:I5").Select
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    Selection.Borders(xlEdgeLeft).LineStyle = xlNone
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlSlantDashDot
+        .ThemeColor = 5
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    Selection.Borders(xlEdgeRight).LineStyle = xlNone
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+    ActiveWindow.DisplayGridlines = False
+    ActiveWindow.Zoom = 85
+    Range("A1").Select
+    
+    Range("A1").Select
+    Selection.Font.Bold = True
+    Range("A1").Select
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    Selection.Borders(xlEdgeLeft).LineStyle = xlNone
+    Selection.Borders(xlEdgeTop).LineStyle = xlNone
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ThemeColor = 10
+        .TintAndShade = 0
+        .Weight = xlThick
+    End With
+    Selection.Borders(xlEdgeRight).LineStyle = xlNone
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+    Range("A9:I9").Select
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    Selection.Borders(xlEdgeLeft).LineStyle = xlNone
+    Selection.Borders(xlEdgeTop).LineStyle = xlNone
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlDouble
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThick
+    End With
+    Selection.Borders(xlEdgeRight).LineStyle = xlNone
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+    Columns("B:I").Select
+    Columns("B:I").EntireColumn.AutoFit
+   
+    Range("F6:G10").Select
+    Selection.Style = "Comma"
+    Selection.NumberFormat = "_-* #,##0.0_-;-* #,##0.0_-;_-* ""-""??_-;_-@_-"
+    Selection.NumberFormat = "_-* #,##0_-;-* #,##0_-;_-* ""-""??_-;_-@_-"
+    Range("H6:I10").Select
+    Selection.Style = "Percent"
+    Range("A1").Select
+        
+      
+    End Sub
+
+    
+        
+
+
+

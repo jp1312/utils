@@ -1,0 +1,359 @@
+
+
+****************** FIRST. ***********************************************
+
+
+proc sort data=mianew ; by key_titolo;run;
+
+data prova;
+set mianew;
+by key_titolo;
+if first.key_titolo then cont=1; else cont=0;
+
+run;
+
+
+
+
+
+
+
+****************** CAGLIARI *******************************************
+
+data sinistri_auto_cvt;
+set sinriep.Db_report_201306;
+anno_den=int(mese_pervden/100);
+where data_Acc ge '01jan2010'd and Ramo_bil in (3,10) 
+and dettaglio_prodotto in ("Auto clienti GMPS", "Passaporto Auto 2010"); 
+run;
+
+proc sql;
+create table sin_prov as select distinct a.key_sin, a.dettaglio_prodotto, a.ramo_bil, a.anno_den, a.anno_acc, b.provincia_rca
+from sinistri_auto_cvt as a left join work.finale5 as b
+on a.key_pol eq b.numero_polizza
+where b.provincia_rca="CA";
+quit;
+
+
+
+
+
+
+
+
+
+
+
+*************************************************
+
+CASE 
+   WHEN 0 = t1.lc_racc_tot_t0 THEN 'CC_SPENTO'
+   WHEN t1.lc_racc_tot_t0 >= 0 AND t1.lc_racc_tot_t0 <= 50 THEN '0 - 50'
+   ELSE t1.lc_racc_tot_t0
+END
+
+
+
+******************************************************
+
+
+
+
+
+
+
+
+
+
+
+****** for ordering variables ! ******
+
+DATA master;
+RETAIN id lnmane fname;
+SET master;
+RUN;
+*******************************************
+
+
+
+
+
+
+
+****** for ordering variables ! ******
+
+DATA master;
+RETAIN id lnmane fname;
+SET master;
+RUN;
+*******************************************
+
+
+
+
+
+
+*********** for selecting all variables but some with proc sql *****************
+
+proc sql;
+create table xxx as select *,
+from yyy (drop = y1 y2 y3);
+quit;
+
+*********************************************************************************
+
+
+
+
+
+*********** for selecting all variables but some with proc sql *****************
+
+proc export data=WORK.ape_mensile
+   outfile="/sas/Data/dati/vita/pricing/APE_MENSILE.txt"
+   dbms=TAB /*dlm*/
+   replace;
+   delimiter=';';
+
+run;
+
+*********************************************************************************
+
+
+
+
+
+*********** join VS exists *****************
+
+select   svc.ltv_scr, count(*) as freq
+from     MY_BASE_TABLE svc
+left outer join MY_TARGET_TABLE x
+on       x.srv_accs_id=svc.srv_accs_id
+where    x.srv_accs_id is null
+group by 1
+order by 1-and-
+
+select   svc.ltv_scr, count(*) as freq
+from     MY_BASE_TABLE svc
+where not exists(
+    select 1
+    from   MY_TARGET_TABLE x
+    where  x.srv_accs_id=svc.srv_accs_id)
+group by 1
+order by 1 
+
+**********************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*********************** create and insert rows in a table **********************
+libname proclib 'SAS-library'; 
+  options nodate pageno=1 linesize=80 pagesize=40; 
+  proc sql;
+   create table proclib.paylist
+       (IdNum char(4),
+        Gender char(1),
+        Jobcode char(3),
+        Salary num,
+        Birth num informat=date7.
+                  format=date7.,
+        Hired num informat=date7.
+                  format=date7.); 
+  insert into proclib.paylist
+    values('1639','F','TA1',42260,'26JUN70'd,'28JAN91'd)
+    values('1065','M','ME3',38090,'26JAN54'd,'07JAN92'd)
+    values('1400','M','ME1',29769.'05NOV67'd,'16OCT90'd) 
+      values('1561','M',null,36514,'30NOV63'd,'07OCT87'd)
+    values('1221','F','FA3',.,'22SEP63'd,'04OCT94'd); 
+     title 'PROCLIB.PAYLIST Table'; 
+  select *
+   from proclib.paylist; 
+***********************************************************************************
+
+
+
+
+
+
+
+********************** ES. ***************
+
+
+proc sql;
+CREATE TABLE Prova
+(
+numero_polizza char(5),
+codice_tipo_documento char(2)
+);
+quit; 
+
+proc sql;
+insert into prova
+    values('RE201','01')
+    values('RE201','01')
+    values('RE201','01')
+    values('RE202','01')
+    values('RE202','#')
+;
+quit; 
+
+proc sql;
+select * from prova;
+quit;
+
+
+proc sql;
+create table check_prova as select
+a.numero_polizza,
+a.codice_tipo_documento
+from prova a
+where exists(select b.numero_polizza from prova b where a.numero_polizza=b.numero_polizza and b.codice_tipo_documento in ('#'));
+quit;
+
+***********************************************ù
+
+
+
+
+
+***************** simulazione numeri casuali + grafico densità ****************
+data p1;
+    do i=1 to 1000;
+        s=rand('table', .3, .4);
+        select (s);
+            when (1) r=rand('normal', -3, 2);
+            when (2) r=rand('normal', 2, 1);
+            when (3) r=rand('normal', 10, 4);
+        end;
+        output;
+    end;
+    keep r;
+run;
+
+proc sgplot data=p1;
+    density r / type=kernel (c=.5);
+run;
+******************************************************************************************
+
+
+
+
+
+
+*********************** character to numeric ************************************
+
+data testin;
+      input sale $9.;
+      fmtsale=input(sale,comma9.);
+      datalines;
+   2,115,353
+   ;
+   
+   *******************************************************************
+   
+   
+   
+   
+   
+   
+   
+   
+   
+
+proc sql;
+select case type
+        when 'num'  then catx (   ' ' 
+                                , 'left( put ('
+                                , name
+                                , ','
+                                , case
+                                   when format is null then 'best12.' 
+                                   else format
+                                   end
+                                , ') ) as'
+                                , name
+                                , 'label ='
+                                , quote( strip(label) )                               
+                              )
+        when 'char' then catx (   ' ' 
+                                , 'input ('
+                                , name
+                                , ', f32. ) as'
+                                , name
+                                , 'label ='
+                                , quote( strip(label) )                               
+                              )
+        else             catx (   ' '
+                                , quote('Error on type')
+                                , 'as'
+                                , name
+                              )
+        end
+ into : selections separated by ' , '
+ from dictionary.columns
+ where libname='WORK' and memname='DB_FIN_348_201412' and name not in 
+('anno',
+'tariffa_ann',
+'sconti_ann',
+'dir_fraz_ann',
+'gwp_ann',
+'gwp',
+'rischi',
+'EP',
+'caus_attr_N',
+'caus_tot_N',
+'carico_attr_N',
+'carico_tot_N',
+'caus_tot_N1',
+'carico_attr_N1',
+'carico_tot_N1',
+'caus_attr_N2',
+'caus_tot_N2',
+'carico_attr_N2',
+'carico_tot_N2',
+'caus_attr_N3',
+'caus_tot_N3',
+'carico_attr_N3',
+'carico_tot_N3',
+'caus_attr_N4',
+'caus_tot_N4',
+'carico_attr_N4',
+'carico_tot_N4',
+'stock_e',
+'nuove_emiss',
+'falsi_an',
+'sostituenti',
+'sostituite',
+'stornate',
+'disdette',
+'annullate_x_insolvenza',
+'annullate_altri_motivi',
+'stornate_postume',
+'false_attive',
+'attive');
+quit;
+   
+   
+
+
+
+
+
+

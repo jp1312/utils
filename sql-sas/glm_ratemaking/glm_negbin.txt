@@ -1,0 +1,21 @@
+
+
+proc genmod data=motorins  plots(only)=resraw;
+class Kilometres2 /*(param=ref ref='1')*/ make /*(param=ref ref='1')*/; 
+/* se avessi numeriche poosso metterle direttamente nello statement model */
+model claims=Kilometres2 make nauto / 
+	dist=negbin 
+	link=log 
+	type1 
+	type3 
+	offset=log_insured
+	scale=pearson;
+weight Insured;
+lsmeans kilometres2 make / pdiff=all;
+output out=work.motorins_stime resraw=residui resdev=res_dev stdresdev=std_res pred=previsti reslik=res_link;
+title "poisson";
+run;
+
+
+
+ods graphics off;

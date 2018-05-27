@@ -1,0 +1,732 @@
+
+
+%macro summary(
+	periodo_estrazione=,
+	label_out=,
+	lib=WORK,
+	vars=,
+	filtri=%str(),
+	my_label=,
+	annoN0=,
+	periodo_interruz_cy=,
+	nyears=0);
+
+/* cambio i nomi in maiuscole */
+%let lib=%sysfunc(upcase(&lib));
+%let my_label=%sysfunc(upcase(&my_label));
+
+%do i=0 %to &nyears.;
+
+%let i1=%sysfunc(sum(&i,1),1.); /* creo una variabile macro utile per i calcoli nel ciclo */
+%let annoN&i1.=%sysfunc(sum(&&annoN&i.,-1),4.); /* creo una variabile macro utile per i calcoli nel ciclo */
+
+%if &vars= %then %do;
+%let all=LoB ;
+%let all_tot=LoB ;
+%let all_totalone="_Totale" as LoB ;
+%let all_select="";
+
+%end;
+%else %do;
+
+%let all=LoB, ;
+%let all_tot=LoB, ;
+%let all_totalone="_Totale" as LoB, ;
+%let all_select="",;
+
+%let nvar = %sysfunc(countw(&vars.,' '));
+%put &nvar.;
+
+%do k = 1 %to &nvar.;
+%let var_&k.= %upcase(%scan(&vars., &k., ' '));
+%put &&var_&k.;
+
+%if &k. ne &nvar. %then %do; %let all=&all.&&var_&k.,; %put &all.; %end;
+%else %do; %let all=&all.&&var_&k.; %put &all.; %end; 
+
+%if &k. ne &nvar. %then %do; %let all_tot=&all_tot. "_Totale" as &&var_&k.,; %put &all_tot.; %end;
+%else %do; %let all_tot=&all_tot. "_Totale" as &&var_&k.; %put &all_tot.; %end; 
+
+%if &k. ne &nvar. %then %do; %let all_totalone=&all_totalone. "_Totale" as &&var_&k.,; %put &all_totalone.; %end;
+%else %do; %let all_totalone=&all_totalone. "_Totale" as &&var_&k.; %put &all_totalone.; %end; 
+
+%if &all_select.= %then %do;
+	%if &k. ne &nvar. %then %do; %let all_select="&&var_&k.",; %put &all_select.; %end;
+	%else %do; %let all_select="&&var_&k."; %put &all_select.; %end;
+%end;
+%else %do;
+%if &k. ne &nvar. %then %do; %let all_select=&all_select. "&&var_&k.",; %put &all_select.; %end;
+%else %do; %let all_select=&all_select. "&&var_&k."; %put &all_select.; %end; 
+%end;
+
+%end;
+%end;
+
+
+proc sql noprint;
+select 
+case when type='num' and upcase(name) in (&all_select.) then catx (   ' ' 
+                                , 'left( put ('
+                                , name
+                                , ','
+                                , case
+                                   when format is null then 'best12.' 
+                                   else format
+                                   end
+                                , ') ) as'
+                                , name
+                              )
+        else name end 
+into : selection separated by ' , '
+from dictionary.columns
+where libname="&lib." and memname="DB_FIN_&label_out._&&annoN&i.._&periodo_interruz_cy.";
+quit;
+
+proc sql;
+create table codif_&i.
+as select
+&selection.
+from &lib..DB_FIN_&label_out._&&annoN&i.._&periodo_interruz_cy.
+&filtri.;
+quit;
+
+data input_&i.;
+set codif_&i.;
+array a(*) _numeric_;
+array b(*) _character_;
+do i=1 to dim(a);
+if missing(a(i)) then a(i) = 0;
+end;
+do j=1 to dim(b);
+if b(j) in ("",".") then b(j) = '_Missing';
+end;
+drop i j;
+run;
+
+
+/* elimino il dettaglio di alcune variabili (posso prendere la SUM dei rischi e dei premi e il MAX dei flag */
+PROC SQL;
+CREATE TABLE riep1_&label_out._&i._&periodo_interruz_cy. AS SELECT    		
+PRODOTTO,
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+RAMO_MINISTERIALE, 
+&all.,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+SUM(rischi) AS rischi,
+SUM(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+MAX(stock_e) AS stock_e, 
+MAX(NB) AS NB,
+MAX(sostituenti) AS sostituenti, 
+MIN(sostituite) AS sostituite, 
+MIN(stornate) AS stornate, 
+MIN(disdette) AS disdette, 
+MIN(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+MIN(annullate_altri_motivi) AS annullate_altri_motivi, 
+MIN(stornate_postume) AS stornate_postume, 
+MIN(false_attive) AS false_attive, 
+MAX(attive) AS attive,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM input_&i.
+
+GROUP BY
+prodotto, 
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+RAMO_MINISTERIALE, 
+&all.;
+QUIT;
+
+/* elimino il dettaglio del ramo ministeriale (posso prendere il MAX dei rischi e dei flag e la SUM dei premi */
+PROC SQL;
+CREATE TABLE riep2_&label_out._&i._&periodo_interruz_cy. AS SELECT
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+&all.,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+MAX(rischi) AS rischi,
+MAX(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+MAX(stock_e) AS stock_e, 
+MAX(NB) AS NB, 
+MAX(sostituenti) AS sostituenti, 
+MIN(sostituite) AS sostituite, 
+MIN(stornate) AS stornate, 
+MIN(disdette) AS disdette, 
+MIN(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+MIN(annullate_altri_motivi) AS annullate_altri_motivi, 
+MIN(stornate_postume) AS stornate_postume, 
+MIN(false_attive) AS false_attive, 
+MAX(attive) AS attive,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM riep1_&label_out._&i._&periodo_interruz_cy.
+GROUP BY
+PRODOTTO, 
+anno,
+mese,
+periodo,
+cd_polizza_0020f, 
+&all.;
+QUIT;
+
+
+/* elimino il dettagli della polizza (posso SOMMARE tutto) */
+PROC SQL;
+CREATE TABLE riep3_&label_out._&i._&periodo_interruz_cy. AS SELECT 
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+&all.,
+SUM(stock_e) AS stock_e, 
+SUM(NB) AS NB,
+SUM(sostituenti) AS sostituenti, 
+SUM(sostituite) AS sostituite, 
+SUM(stornate) AS stornate, 
+SUM(disdette) AS disdette, 
+SUM(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+SUM(annullate_altri_motivi) AS annullate_altri_motivi, 
+SUM(stornate_postume) AS stornate_postume, 
+SUM(false_attive) AS false_attive, 
+SUM(attive) AS attive,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+SUM(rischi) AS rischi,
+SUM(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM riep2_&label_out._&i._&periodo_interruz_cy.
+GROUP BY
+PRODOTTO, 
+anno,
+mese,
+periodo,
+&all.;
+QUIT;
+
+
+
+/*++++++++++*/
+/* TOTALI  */
+/*++++++++*/
+
+/* elimino il dettaglio di alcune variabili (posso prendere la SUM dei rischi e dei premi e il MAX dei flag */
+PROC SQL;
+CREATE TABLE tot1_&label_out._&i._&periodo_interruz_cy. AS SELECT
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+RAMO_MINISTERIALE, 
+&all_tot.,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+SUM(rischi) AS rischi,
+SUM(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+MAX(stock_e) AS stock_e, 
+MAX(NB) AS NB,
+MAX(sostituenti) AS sostituenti, 
+MIN(sostituite) AS sostituite, 
+MIN(stornate) AS stornate, 
+MIN(disdette) AS disdette, 
+MIN(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+MIN(annullate_altri_motivi) AS annullate_altri_motivi, 
+MIN(stornate_postume) AS stornate_postume, 
+MIN(false_attive) AS false_attive, 
+MAX(attive) AS attive,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM input_&i.
+GROUP BY
+prodotto, 
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+RAMO_MINISTERIALE, 
+&all.;
+QUIT;
+
+PROC SQL;
+CREATE TABLE tot2_&label_out._&i._&periodo_interruz_cy. AS SELECT
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+&all.,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+MAX(rischi) AS rischi,
+MAX(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+MAX(stock_e) AS stock_e, 
+MAX(NB) AS NB, 
+MAX(sostituenti) AS sostituenti, 
+MIN(sostituite) AS sostituite, 
+MIN(stornate) AS stornate, 
+MIN(disdette) AS disdette, 
+MIN(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+MIN(annullate_altri_motivi) AS annullate_altri_motivi, 
+MIN(stornate_postume) AS stornate_postume, 
+MIN(false_attive) AS false_attive, 
+MAX(attive) AS attive,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM tot1_&label_out._&i._&periodo_interruz_cy.
+GROUP BY
+PRODOTTO, 
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+&all.;
+QUIT;
+
+PROC SQL;
+CREATE TABLE tot3_&label_out._&i._&periodo_interruz_cy. AS SELECT
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+&all.,
+SUM(stock_e) AS stock_e, 
+SUM(NB) AS NB, 
+SUM(sostituenti) AS sostituenti, 
+SUM(sostituite) AS sostituite, 
+SUM(stornate) AS stornate, 
+SUM(disdette) AS disdette, 
+SUM(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+SUM(annullate_altri_motivi) AS annullate_altri_motivi, 
+SUM(stornate_postume) AS stornate_postume, 
+SUM(false_attive) AS false_attive, 
+SUM(attive) AS attive,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+SUM(rischi) AS rischi,
+SUM(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM tot2_&label_out._&i._&periodo_interruz_cy.
+GROUP BY
+PRODOTTO, 
+anno, 
+mese,
+periodo,
+&all.;
+QUIT;
+
+
+/*++++++++++++*/
+/* TOTALONE  */
+/*++++++++++*/
+
+/* elimino il dettaglio di alcune variabili (posso prendere la SUM dei rischi e dei premi e il MAX dei flag */
+PROC SQL;
+CREATE TABLE totalone1_&label_out._&i._&periodo_interruz_cy. AS SELECT 
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+RAMO_MINISTERIALE, 
+&all_totalone.,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+SUM(rischi) AS rischi,
+SUM(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+MAX(stock_e) AS stock_e, 
+MAX(NB) AS NB,
+MAX(sostituenti) AS sostituenti, 
+MIN(sostituite) AS sostituite, 
+MIN(stornate) AS stornate, 
+MIN(disdette) AS disdette, 
+MIN(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+MIN(annullate_altri_motivi) AS annullate_altri_motivi, 
+MIN(stornate_postume) AS stornate_postume, 
+MIN(false_attive) AS false_attive, 
+MAX(attive) AS attive,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM input_&i.
+GROUP BY
+prodotto, 
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+RAMO_MINISTERIALE, 
+&all.;
+QUIT;
+
+PROC SQL;
+CREATE TABLE totalone2_&label_out._&i._&periodo_interruz_cy. AS SELECT
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+&all.,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+MAX(rischi) AS rischi,
+MAX(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+MAX(stock_e) AS stock_e, 
+MAX(NB) AS NB, 
+MAX(sostituenti) AS sostituenti, 
+MIN(sostituite) AS sostituite, 
+MIN(stornate) AS stornate, 
+MIN(disdette) AS disdette, 
+MIN(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+MIN(annullate_altri_motivi) AS annullate_altri_motivi, 
+MIN(stornate_postume) AS stornate_postume, 
+MIN(false_attive) AS false_attive, 
+MAX(attive) AS attive,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM totalone1_&label_out._&i._&periodo_interruz_cy.
+GROUP BY
+PRODOTTO, 
+anno, 
+mese,
+periodo,
+cd_polizza_0020f, 
+&all.;
+QUIT;
+
+PROC SQL;
+CREATE TABLE totalone3_&label_out._&i._&periodo_interruz_cy. AS SELECT
+PRODOTTO,	
+anno, 
+mese,
+periodo,
+&all.,
+SUM(stock_e) AS stock_e, 
+SUM(NB) AS NB, 
+SUM(sostituenti) AS sostituenti, 
+SUM(sostituite) AS sostituite, 
+SUM(stornate) AS stornate, 
+SUM(disdette) AS disdette, 
+SUM(annullate_x_insolvenza) AS annullate_x_insolvenza, 
+SUM(annullate_altri_motivi) AS annullate_altri_motivi, 
+SUM(stornate_postume) AS stornate_postume, 
+SUM(false_attive) AS false_attive, 
+SUM(attive) AS attive,
+SUM(tariffa_ann) AS tariffa_ann, 
+SUM(sconti_ann) AS sconti_ann, 
+SUM(dir_fraz_ann) AS dir_fraz_ann, 
+SUM(gwp_ann) AS gwp_ann, 
+SUM(gwp) AS gwp,
+SUM(gwp_NB) as gwp_NB,
+SUM(rischi) AS rischi,
+SUM(rischi_NB) as rischi_NB, 
+SUM(EP) AS EP, 
+SUM(EP_NB) as EP_NB,
+SUM(caus_attr_N) AS caus_attr_N,
+SUM(caus_tot_N) AS caus_tot_N,
+SUM(carico_attr_N) AS carico_attr_N,
+SUM(carico_tot_N) AS carico_tot_N,
+SUM(caus_attr_N_NB) AS caus_attr_N_NB,
+SUM(caus_tot_N_NB) AS caus_tot_N_NB,
+SUM(carico_attr_N_NB) AS carico_attr_N_NB,
+SUM(carico_tot_N_NB) AS carico_tot_N_NB,
+SUM(caus_attr_N1) AS caus_attr_N1,
+SUM(caus_tot_N1) AS caus_tot_N1,
+SUM(carico_attr_N1) as carico_attr_N1,
+SUM(carico_tot_N1) as carico_tot_N1,
+SUM(caus_attr_N2) as caus_attr_N2,
+SUM(caus_tot_N2) as caus_tot_N2,
+sum(carico_attr_N2) as carico_attr_N2,
+sum(carico_tot_N2) as carico_tot_N2,
+sum(caus_attr_N3) as caus_attr_N3,
+sum(caus_tot_N3) as caus_tot_N3,
+sum(carico_attr_N3) as carico_attr_N3,
+sum(carico_tot_N3) as carico_tot_N3,
+sum(caus_attr_N4) as caus_attr_N4,
+sum(caus_tot_N4) as caus_tot_N4,
+sum(carico_attr_N4) as carico_attr_N4,
+sum(carico_tot_N4) as carico_tot_N4
+FROM totalone2_&label_out._&i._&periodo_interruz_cy.
+GROUP BY
+PRODOTTO, 
+anno, 
+mese,
+periodo,
+&all.;
+QUIT;
+
+%if &vars.= %then %do;
+/* append finale */
+data temp_&label_out._&i._&periodo_interruz_cy.;
+set 
+riep3_&label_out._&i._&periodo_interruz_cy. 
+totalone3_&label_out._&i._&periodo_interruz_cy.;
+run;%end; 
+%else %do;
+/* append finale */
+data temp_&label_out._&i._&periodo_interruz_cy.;
+set 
+riep3_&label_out._&i._&periodo_interruz_cy. 
+tot3_&label_out._&i._&periodo_interruz_cy.
+totalone3_&label_out._&i._&periodo_interruz_cy.;
+run; %end;
+
+
+/* produco output finale */
+proc sql;
+create table &my_label._&label_out._&&annoN&i.._&periodo_interruz_cy. as select distinct *
+from temp_&label_out._&i._&periodo_interruz_cy.;
+quit;
+
+proc datasets lib=work;
+delete
+codif_&i.
+input_&i. 
+riep1_&label_out._&i._&periodo_interruz_cy.
+riep2_&label_out._&i._&periodo_interruz_cy.
+riep3_&label_out._&i._&periodo_interruz_cy.
+tot1_&label_out._&i._&periodo_interruz_cy.
+tot2_&label_out._&i._&periodo_interruz_cy.
+tot3_&label_out._&i._&periodo_interruz_cy.
+totalone1_&label_out._&i._&periodo_interruz_cy.
+totalone2_&label_out._&i._&periodo_interruz_cy.
+totalone3_&label_out._&i._&periodo_interruz_cy.
+temp_&label_out._&i._&periodo_interruz_cy.;
+run;
+%end;
+%mend;
+

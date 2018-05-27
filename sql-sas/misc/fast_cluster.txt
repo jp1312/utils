@@ -1,0 +1,873 @@
+libname DB "C:\DB\dbaxa sett 1";
+options mlogic mprint compress=yes nolabel;
+
+/***********Provincia Urbano************/
+proc sql;
+create table uni_PROVINCIA_URB as select 
+cat_prov_urb,
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(1) as nr format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO) as FORFAIT_DEBITORI_CARICO format commax30.2	,
+sum(FORFAIT_GESTITI_CARICO) as FORFAIT_GESTITI_CARICO format commax30.2	,
+sum(NUMSIN) as NUMSIN format commax30.2	,
+sum(NUM_CAUSATI) as NUM_CAUSATI format commax30.2	,	
+sum(sum(NUMSIN,-NUM_CAUSATI)) as num_sin_sub format commax30.2	,
+sum(NUM_DEB) as NUM_DEB format commax30.2	,
+sum(NUM_GEST) as NUM_GEST format commax30.2	,
+sum(NUM_RCA) as NUM_RCA format commax30.2	,
+sum(gestiti_carico) as gestiti_carico format commax30.2	,
+sum(rca_carico) as rca_carico format commax30.2	,
+sum(carico_tot) as carico_tot format commax30.2	,
+sum(carico_cap100) as carico_cap100 format commax30.2	,
+sum(costo_subito_cap100) as costo_subito_cap100 format commax30.2	,
+sum(costo_causato_cap100) as costo_causato_cap100 format commax30.2	,
+sum(PRMRCA) as PRMRCA format commax30.2
+from db.db_axa_I 
+WHERE ANNO in ( 2008 ,2009,2010) 
+group by 1;
+quit;
+
+data pr_urb;
+set uni_PROVINCIA_URB;
+Freq_causata=NUM_CAUSATI/VEICANNO;
+freq_SUBITA=NUM_GEST/VEICANNO;
+log_freq_causata=log(NUM_CAUSATI/VEICANNO);
+log_freq_SUBITA=log(NUM_GEST/VEICANNO);
+Cm_subiti=costo_subito_cap100/NUM_GEST;
+Cm_causati=costo_causato_cap100/NUM_CAUSATI; 
+log_CM_subiti=log(CM_subiti);
+log_CM_causati=log(CM_causati);
+Forfait_medio=FORFAIT_GESTITI_CARICO/NUM_GEST;
+log_FG=log(Forfait_medio);
+Premio_puro=carico_cap100/VEICANNO;
+log_PP=log(Premio_puro);
+run;
+
+proc fastclus data=pr_urb radius=0.05 out=provincia_FC_logw noprint;
+var log_freq_causata;
+weight VEICANNO;
+run;
+proc fastclus data=pr_urb radius=0.05 out=provincia_FS_logw noprint;
+var log_freq_SUBITA;
+weight VEICANNO;
+run;
+proc fastclus data=pr_urb radius=0.1 out=provincia_CC_logw noprint;
+var log_Cm_subiti;
+weight NUM_GEST;
+run;
+proc fastclus data=pr_urb radius=0.1 out=provincia_CS_logw noprint;
+var log_CM_causati;
+weight NUM_CAUSATI;
+run;
+proc fastclus data=pr_urb radius=0.1 out=provincia_fg_logw noprint;
+var log_fg;
+weight  NUM_GEST;
+run;
+proc fastclus data=pr_urb radius=0.1 out=provincia_PP_logw noprint;
+var log_PP;
+weight  VEICANNO;
+run;
+
+
+
+%macro fcuniv(db);
+proc means data=&db noprint;
+var 
+NR
+VEICANNO
+Freq_causata
+freq_SUBITA
+Cm_subiti
+Cm_causatI
+FORFAIT_DEBITORI_CARICO 
+FORFAIT_GESTITI_CARICO 
+NUMSIN 
+NUM_CAUSATI 
+num_sin_sub 
+NUM_DEB 
+NUM_GEST 
+NUM_RCA 
+gestiti_carico 
+rca_carico 
+carico_tot
+carico_cap100 
+costo_subito_cap100 
+costo_causato_cap100 
+PRMRCA;
+class cluster;
+output out=clusters_&db sum=;
+run;
+%mend fcuniv;
+%fcuniv(provincia_FC_logw);
+%fcuniv(provincia_Fs_logw);
+%fcuniv(provincia_cC_logw);
+%fcuniv(provincia_cs_logw);
+%fcuniv(provincia_FG_logw);
+%fcuniv(provincia_PP_logw);
+
+
+
+PROC SQL;
+CREATE TABLE fc_RESULT_pr_urb_f  AS SELECT
+A.*,
+A.CLUSTER AS CLfc,b.CLUSTER AS CLfS
+FROM PROVINCIA_FC_LOGW AS A FULL JOIN PROVINCIA_FS_LOGW AS B 
+ON A.CAT_PROV_urb=b.CAT_PROV_urb ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_pr_urb_c  AS SELECT
+A.*,
+A.CLUSTER AS CLcc,b.CLUSTER AS CLcS
+FROM PROVINCIA_CC_LOGW AS A FULL JOIN PROVINCIA_CS_LOGW AS B 
+ON A.CAT_PROV_urb=b.CAT_PROV_urb ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_pr_urb_p  AS SELECT
+A.*,
+A.CLUSTER AS CLPP,b.CLUSTER AS CLfg
+FROM PROVINCIA_PP_LOGW as a FULL JOIN  PROVINCIA_fg_LOGW AS B 
+ON A.CAT_PROV_urb=b.CAT_PROV_urb 
+ ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_pr_urb_a  AS SELECT
+A.*, B.CLcc,B.CLcS
+FROM fc_RESULT_pr_urb_f   AS A FULL JOIN  fc_RESULT_pr_urb_c AS B 
+ON A.CAT_PROV_urb=b.CAT_PROV_urb ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_pr_urb  AS SELECT
+A.*, B.CLpp,B.CLfg
+FROM fc_RESULT_pr_urb_a   AS A FULL JOIN  fc_RESULT_pr_urb_p AS B 
+ON A.CAT_PROV_urb=b.CAT_PROV_urb ;
+QUIT;
+
+
+
+/***********cv_alim************/
+proc sql;
+create table uni_cv_alim as select 
+cat_cv_alim,
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(1) as nr format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO) as FORFAIT_DEBITORI_CARICO format commax30.2	,
+sum(FORFAIT_GESTITI_CARICO) as FORFAIT_GESTITI_CARICO format commax30.2	,
+sum(NUMSIN) as NUMSIN format commax30.2	,
+sum(NUM_CAUSATI) as NUM_CAUSATI format commax30.2	,	
+sum(sum(NUMSIN,-NUM_CAUSATI)) as num_sin_sub format commax30.2	,
+sum(NUM_DEB) as NUM_DEB format commax30.2	,
+sum(NUM_GEST) as NUM_GEST format commax30.2	,
+sum(NUM_RCA) as NUM_RCA format commax30.2	,
+sum(gestiti_carico) as gestiti_carico format commax30.2	,
+sum(rca_carico) as rca_carico format commax30.2	,
+sum(carico_tot) as carico_tot format commax30.2	,
+sum(carico_cap100) as carico_cap100 format commax30.2	,
+sum(costo_subito_cap100) as costo_subito_cap100 format commax30.2	,
+sum(costo_causato_cap100) as costo_causato_cap100 format commax30.2	,
+sum(PRMRCA) as PRMRCA format commax30.2
+from db.db_axa_I 
+WHERE ANNO in ( 2008 ,2009) 
+group by 1;
+quit;
+
+
+
+data cv_alim;
+set uni_cv_alim;
+Freq_causata=NUM_CAUSATI/VEICANNO;
+freq_SUBITA=NUM_GEST/VEICANNO;
+log_freq_causata=log(NUM_CAUSATI/VEICANNO);
+log_freq_SUBITA=log(NUM_GEST/VEICANNO);
+Cm_subiti=costo_subito_cap100/NUM_GEST;
+Cm_causati=costo_causato_cap100/NUM_CAUSATI; 
+log_CM_subiti=log(CM_subiti);
+log_CM_causati=log(CM_causati);
+run;
+
+
+
+proc fastclus data=cv_alim radius=0.05 out=cv_alim_FC_logw noprint;
+var log_freq_causata;
+weight VEICANNO;
+run;
+proc fastclus data=cv_alim radius=0.05 out=cv_alim_FS_logw noprint;
+var log_freq_SUBITA;
+weight VEICANNO;
+run;
+proc fastclus data=cv_alim radius=0.1 out=cv_alim_CC_logw noprint;
+var log_Cm_subiti;
+weight NUM_GEST;
+run;
+proc fastclus data=cv_alim radius=0.1 out=cv_alim_CS_logw noprint;
+var log_CM_causati;
+weight NUM_CAUSATI;
+run;
+%macro fcuniv(db);
+proc means data=&db noprint;
+var 
+NR
+VEICANNO
+Freq_causata
+freq_SUBITA
+Cm_subiti
+Cm_causatI
+FORFAIT_DEBITORI_CARICO 
+FORFAIT_GESTITI_CARICO 
+NUMSIN 
+NUM_CAUSATI 
+num_sin_sub 
+NUM_DEB 
+NUM_GEST 
+NUM_RCA 
+gestiti_carico 
+rca_carico 
+carico_tot
+carico_cap100 
+costo_subito_cap100 
+costo_causato_cap100 
+PRMRCA;
+class cluster;
+output out=clusters_&db sum=;
+run;
+%mend fcuniv;
+%fcuniv(cv_alim_FC_logw);
+%fcuniv(cv_alim_Fs_logw);
+%fcuniv(cv_alim_cC_logw);
+%fcuniv(cv_alim_cs_logw);
+
+PROC SQL;
+CREATE TABLE fc_RESULT_cv_alim_f  AS SELECT
+A.*,
+A.CLUSTER AS CLfc,b.CLUSTER AS CLfS
+FROM cv_alim_FC_logw AS A FULL JOIN cv_alim_Fs_logw AS B 
+ON A.CAT_cv_alim=b.CAT_cv_alim ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_cv_alim_c  AS SELECT
+A.*,
+A.CLUSTER AS CLcc,b.CLUSTER AS CLcS
+FROM cv_alim_CC_LOGW AS A FULL JOIN cv_alim_CS_LOGW AS B 
+ON A.CAT_cv_alim=b.CAT_cv_alim ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_cv_alim  AS SELECT
+A.*, B.CLcc,B.CLcS
+FROM fc_RESULT_cv_alim_f   AS A FULL JOIN  fc_RESULT_cv_alim_c AS B 
+ON A.CAT_cv_alim=b.CAT_cv_alim;
+QUIT;
+
+
+
+/***********prof************/
+proc sql;
+create table uni_prof as select 
+cat_prof_v2,
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(1) as nr format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO) as FORFAIT_DEBITORI_CARICO format commax30.2	,
+sum(FORFAIT_GESTITI_CARICO) as FORFAIT_GESTITI_CARICO format commax30.2	,
+sum(NUMSIN) as NUMSIN format commax30.2	,
+sum(NUM_CAUSATI) as NUM_CAUSATI format commax30.2	,	
+sum(sum(NUMSIN,-NUM_CAUSATI)) as num_sin_sub format commax30.2	,
+sum(NUM_DEB) as NUM_DEB format commax30.2	,
+sum(NUM_GEST) as NUM_GEST format commax30.2	,
+sum(NUM_RCA) as NUM_RCA format commax30.2	,
+sum(gestiti_carico) as gestiti_carico format commax30.2	,
+sum(rca_carico) as rca_carico format commax30.2	,
+sum(carico_tot) as carico_tot format commax30.2	,
+sum(carico_cap100) as carico_cap100 format commax30.2	,
+sum(costo_subito_cap100) as costo_subito_cap100 format commax30.2	,
+sum(costo_causato_cap100) as costo_causato_cap100 format commax30.2	,
+sum(PRMRCA) as PRMRCA format commax30.2
+from db.db_axa_I 
+WHERE ANNO in ( 2008 ,2009) 
+group by 1;
+quit;
+
+
+
+data prof;
+set uni_prof;
+Freq_causata=NUM_CAUSATI/VEICANNO;
+freq_SUBITA=NUM_GEST/VEICANNO;
+log_freq_causata=log(NUM_CAUSATI/VEICANNO);
+log_freq_SUBITA=log(NUM_GEST/VEICANNO);
+Cm_subiti=costo_subito_cap100/NUM_GEST;
+Cm_causati=costo_causato_cap100/NUM_CAUSATI; 
+log_CM_subiti=log(CM_subiti);
+log_CM_causati=log(CM_causati);
+run;
+
+
+
+proc fastclus data=prof radius=0.05 out=prof_FC_logw noprint;
+var log_freq_causata;
+weight VEICANNO;
+run;
+proc fastclus data=prof radius=0.05 out=prof_FS_logw noprint;
+var log_freq_SUBITA;
+weight VEICANNO;
+run;
+proc fastclus data=prof radius=0.1 out=prof_CC_logw noprint;
+var log_Cm_subiti;
+weight NUM_GEST;
+run;
+proc fastclus data=prof radius=0.1 out=prof_CS_logw noprint;
+var log_CM_causati;
+weight NUM_CAUSATI;
+run;
+%macro fcuniv(db);
+proc means data=&db noprint;
+var 
+NR
+VEICANNO
+Freq_causata
+freq_SUBITA
+Cm_subiti
+Cm_causatI
+FORFAIT_DEBITORI_CARICO 
+FORFAIT_GESTITI_CARICO 
+NUMSIN 
+NUM_CAUSATI 
+num_sin_sub 
+NUM_DEB 
+NUM_GEST 
+NUM_RCA 
+gestiti_carico 
+rca_carico 
+carico_tot
+carico_cap100 
+costo_subito_cap100 
+costo_causato_cap100 
+PRMRCA;
+class cluster;
+output out=clusters_&db sum=;
+run;
+%mend fcuniv;
+%fcuniv(prof_FC_logw);
+%fcuniv(prof_Fs_logw);
+%fcuniv(prof_cC_logw);
+%fcuniv(prof_cs_logw);
+
+PROC SQL;
+CREATE TABLE fc_RESULT_prof_f  AS SELECT
+A.*,
+A.CLUSTER AS CLfc,b.CLUSTER AS CLfS
+FROM prof_FC_logw AS A FULL JOIN prof_Fs_logw AS B 
+ON A.CAT_prof_v2=b.CAT_prof_v2 ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_prof_c  AS SELECT
+A.*,
+A.CLUSTER AS CLcc,b.CLUSTER AS CLcS
+FROM prof_CC_LOGW AS A FULL JOIN prof_CS_LOGW AS B 
+ON A.CAT_prof_v2=b.CAT_prof_v2 ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_prof  AS SELECT
+A.*, B.CLcc,B.CLcS
+FROM fc_RESULT_prof_f   AS A FULL JOIN  fc_RESULT_prof_c AS B 
+ON A.CAT_prof_v2=b.CAT_prof_v2;
+QUIT;
+
+
+
+/***********kw************/
+proc sql;
+create table uni_kW as select 
+cat_kW,
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(1) as nr format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO) as FORFAIT_DEBITORI_CARICO format commax30.2	,
+sum(FORFAIT_GESTITI_CARICO) as FORFAIT_GESTITI_CARICO format commax30.2	,
+sum(NUMSIN) as NUMSIN format commax30.2	,
+sum(NUM_CAUSATI) as NUM_CAUSATI format commax30.2	,	
+sum(sum(NUMSIN,-NUM_CAUSATI)) as num_sin_sub format commax30.2	,
+sum(NUM_DEB) as NUM_DEB format commax30.2	,
+sum(NUM_GEST) as NUM_GEST format commax30.2	,
+sum(NUM_RCA) as NUM_RCA format commax30.2	,
+sum(gestiti_carico) as gestiti_carico format commax30.2	,
+sum(rca_carico) as rca_carico format commax30.2	,
+sum(carico_tot) as carico_tot format commax30.2	,
+sum(carico_cap100) as carico_cap100 format commax30.2	,
+sum(costo_subito_cap100) as costo_subito_cap100 format commax30.2	,
+sum(costo_causato_cap100) as costo_causato_cap100 format commax30.2	,
+sum(PRMRCA) as PRMRCA format commax30.2
+from db.db_axa_I 
+WHERE ANNO in ( 2008 ,2009) 
+group by 1;
+quit;
+
+
+
+data kW;
+set uni_kW;
+Freq_causata=NUM_CAUSATI/VEICANNO;
+freq_SUBITA=NUM_GEST/VEICANNO;
+log_freq_causata=log(NUM_CAUSATI/VEICANNO);
+log_freq_SUBITA=log(NUM_GEST/VEICANNO);
+Cm_subiti=costo_subito_cap100/NUM_GEST;
+Cm_causati=costo_causato_cap100/NUM_CAUSATI; 
+log_CM_subiti=log(CM_subiti);
+log_CM_causati=log(CM_causati);
+run;
+
+
+
+proc fastclus data=kW radius=0.05 out=kW_FC_logw noprint;
+var log_freq_causata;
+weight VEICANNO;
+run;
+proc fastclus data=kW radius=0.05 out=kW_FS_logw noprint;
+var log_freq_SUBITA;
+weight VEICANNO;
+run;
+proc fastclus data=kW radius=0.1 out=kW_CC_logw noprint;
+var log_Cm_subiti;
+weight NUM_GEST;
+run;
+proc fastclus data=kW radius=0.1 out=kW_CS_logw noprint;
+var log_CM_causati;
+weight NUM_CAUSATI;
+run;
+%macro fcuniv(db);
+proc means data=&db noprint;
+var 
+NR
+VEICANNO
+Freq_causata
+freq_SUBITA
+Cm_subiti
+Cm_causatI
+FORFAIT_DEBITORI_CARICO 
+FORFAIT_GESTITI_CARICO 
+NUMSIN 
+NUM_CAUSATI 
+num_sin_sub 
+NUM_DEB 
+NUM_GEST 
+NUM_RCA 
+gestiti_carico 
+rca_carico 
+carico_tot
+carico_cap100 
+costo_subito_cap100 
+costo_causato_cap100 
+PRMRCA;
+class cluster;
+output out=clusters_&db sum=;
+run;
+%mend fcuniv;
+%fcuniv(kW_FC_logw);
+%fcuniv(kW_Fs_logw);
+%fcuniv(kW_cC_logw);
+%fcuniv(kW_cs_logw);
+
+PROC SQL;
+CREATE TABLE fc_RESULT_kW_f  AS SELECT
+A.*,
+A.CLUSTER AS CLfc,b.CLUSTER AS CLfS
+FROM kW_FC_logw AS A FULL JOIN kW_Fs_logw AS B 
+ON A.CAT_kW=b.CAT_kW ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_kW_c  AS SELECT
+A.*,
+A.CLUSTER AS CLcc,b.CLUSTER AS CLcS
+FROM kW_CC_LOGW AS A FULL JOIN kW_CS_LOGW AS B 
+ON A.CAT_kW=b.CAT_kW ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_kW  AS SELECT
+A.*, B.CLcc,B.CLcS
+FROM fc_RESULT_kW_f   AS A FULL JOIN  fc_RESULT_kW_c AS B 
+ON A.CAT_kW=b.CAT_kW;
+QUIT;
+
+
+/***********eta_veic************/
+proc sql;
+create table uni_eta_veic as select 
+cat_eta_veic,
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(1) as nr format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO) as FORFAIT_DEBITORI_CARICO format commax30.2	,
+sum(FORFAIT_GESTITI_CARICO) as FORFAIT_GESTITI_CARICO format commax30.2	,
+sum(NUMSIN) as NUMSIN format commax30.2	,
+sum(NUM_CAUSATI) as NUM_CAUSATI format commax30.2	,	
+sum(sum(NUMSIN,-NUM_CAUSATI)) as num_sin_sub format commax30.2	,
+sum(NUM_DEB) as NUM_DEB format commax30.2	,
+sum(NUM_GEST) as NUM_GEST format commax30.2	,
+sum(NUM_RCA) as NUM_RCA format commax30.2	,
+sum(gestiti_carico) as gestiti_carico format commax30.2	,
+sum(rca_carico) as rca_carico format commax30.2	,
+sum(carico_tot) as carico_tot format commax30.2	,
+sum(carico_cap100) as carico_cap100 format commax30.2	,
+sum(costo_subito_cap100) as costo_subito_cap100 format commax30.2	,
+sum(costo_causato_cap100) as costo_causato_cap100 format commax30.2	,
+sum(PRMRCA) as PRMRCA format commax30.2
+from db.db_axa_I 
+WHERE ANNO in ( 2008 ,2009) 
+group by 1;
+quit;
+
+
+
+data eta_veic;
+set uni_eta_veic;
+Freq_causata=NUM_CAUSATI/VEICANNO;
+freq_SUBITA=NUM_GEST/VEICANNO;
+log_freq_causata=log(NUM_CAUSATI/VEICANNO);
+log_freq_SUBITA=log(NUM_GEST/VEICANNO);
+Cm_subiti=costo_subito_cap100/NUM_GEST;
+Cm_causati=costo_causato_cap100/NUM_CAUSATI; 
+log_CM_subiti=log(CM_subiti);
+log_CM_causati=log(CM_causati);
+run;
+
+
+
+proc fastclus data=eta_veic radius=0.05 out=eta_veic_FC_logw noprint;
+var log_freq_causata;
+weight VEICANNO;
+run;
+proc fastclus data=eta_veic radius=0.05 out=eta_veic_FS_logw noprint;
+var log_freq_SUBITA;
+weight VEICANNO;
+run;
+proc fastclus data=eta_veic radius=0.1 out=eta_veic_CC_logw noprint;
+var log_Cm_subiti;
+weight NUM_GEST;
+run;
+proc fastclus data=eta_veic radius=0.1 out=eta_veic_CS_logw noprint;
+var log_CM_causati;
+weight NUM_CAUSATI;
+run;
+%macro fcuniv(db);
+proc means data=&db noprint;
+var 
+NR
+VEICANNO
+Freq_causata
+freq_SUBITA
+Cm_subiti
+Cm_causatI
+FORFAIT_DEBITORI_CARICO 
+FORFAIT_GESTITI_CARICO 
+NUMSIN 
+NUM_CAUSATI 
+num_sin_sub 
+NUM_DEB 
+NUM_GEST 
+NUM_RCA 
+gestiti_carico 
+rca_carico 
+carico_tot
+carico_cap100 
+costo_subito_cap100 
+costo_causato_cap100 
+PRMRCA;
+class cluster;
+output out=clusters_&db sum=;
+run;
+%mend fcuniv;
+%fcuniv(eta_veic_FC_logw);
+%fcuniv(eta_veic_Fs_logw);
+%fcuniv(eta_veic_cC_logw);
+%fcuniv(eta_veic_cs_logw);
+
+PROC SQL;
+CREATE TABLE fc_RESULT_eta_veic_f  AS SELECT
+A.*,
+A.CLUSTER AS CLfc,b.CLUSTER AS CLfS
+FROM eta_veic_FC_logw AS A FULL JOIN eta_veic_Fs_logw AS B 
+ON A.CAT_eta_veic=b.CAT_eta_veic ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_eta_veic_c  AS SELECT
+A.*,
+A.CLUSTER AS CLcc,b.CLUSTER AS CLcS
+FROM eta_veic_CC_LOGW AS A FULL JOIN eta_veic_CS_LOGW AS B 
+ON A.CAT_eta_veic=b.CAT_eta_veic ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_eta_veic  AS SELECT
+A.*, B.CLcc,B.CLcS
+FROM fc_RESULT_eta_veic_f   AS A FULL JOIN  fc_RESULT_eta_veic_c AS B 
+ON A.CAT_eta_veic=b.CAT_eta_veic;
+QUIT;
+
+
+
+
+/***********marca************/
+proc sql;
+create table uni_marca as select 
+cat_marca,
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(1) as nr format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO) as FORFAIT_DEBITORI_CARICO format commax30.2	,
+sum(FORFAIT_GESTITI_CARICO) as FORFAIT_GESTITI_CARICO format commax30.2	,
+sum(NUMSIN) as NUMSIN format commax30.2	,
+sum(NUM_CAUSATI) as NUM_CAUSATI format commax30.2	,	
+sum(sum(NUMSIN,-NUM_CAUSATI)) as num_sin_sub format commax30.2	,
+sum(NUM_DEB) as NUM_DEB format commax30.2	,
+sum(NUM_GEST) as NUM_GEST format commax30.2	,
+sum(NUM_RCA) as NUM_RCA format commax30.2	,
+sum(gestiti_carico) as gestiti_carico format commax30.2	,
+sum(rca_carico) as rca_carico format commax30.2	,
+sum(carico_tot) as carico_tot format commax30.2	,
+sum(carico_cap100) as carico_cap100 format commax30.2	,
+sum(costo_subito_cap100) as costo_subito_cap100 format commax30.2	,
+sum(costo_causato_cap100) as costo_causato_cap100 format commax30.2	,
+sum(PRMRCA) as PRMRCA format commax30.2
+from db.db_axa_I 
+WHERE ANNO in ( 2008 ,2009) 
+group by 1;
+quit;
+
+
+
+data marca;
+set uni_marca;
+Freq_causata=NUM_CAUSATI/VEICANNO;
+freq_SUBITA=NUM_GEST/VEICANNO;
+log_freq_causata=log(NUM_CAUSATI/VEICANNO);
+log_freq_SUBITA=log(NUM_GEST/VEICANNO);
+Cm_subiti=costo_subito_cap100/NUM_GEST;
+Cm_causati=costo_causato_cap100/NUM_CAUSATI; 
+log_CM_subiti=log(CM_subiti);
+log_CM_causati=log(CM_causati);
+run;
+
+
+
+proc fastclus data=marca radius=0.05 out=marca_FC_logw noprint;
+var log_freq_causata;
+weight VEICANNO;
+run;
+proc fastclus data=marca radius=0.05 out=marca_FS_logw noprint;
+var log_freq_SUBITA;
+weight VEICANNO;
+run;
+proc fastclus data=marca radius=0.1 out=marca_CC_logw noprint;
+var log_Cm_subiti;
+weight NUM_GEST;
+run;
+proc fastclus data=marca radius=0.1 out=marca_CS_logw noprint;
+var log_CM_causati;
+weight NUM_CAUSATI;
+run;
+%macro fcuniv(db);
+proc means data=&db noprint;
+var 
+NR
+VEICANNO
+Freq_causata
+freq_SUBITA
+Cm_subiti
+Cm_causatI
+FORFAIT_DEBITORI_CARICO 
+FORFAIT_GESTITI_CARICO 
+NUMSIN 
+NUM_CAUSATI 
+num_sin_sub 
+NUM_DEB 
+NUM_GEST 
+NUM_RCA 
+gestiti_carico 
+rca_carico 
+carico_tot
+carico_cap100 
+costo_subito_cap100 
+costo_causato_cap100 
+PRMRCA;
+class cluster;
+output out=clusters_&db sum=;
+run;
+%mend fcuniv;
+%fcuniv(marca_FC_logw);
+%fcuniv(marca_Fs_logw);
+%fcuniv(marca_cC_logw);
+%fcuniv(marca_cs_logw);
+
+PROC SQL;
+CREATE TABLE fc_RESULT_marca_f  AS SELECT
+A.*,
+A.CLUSTER AS CLfc,b.CLUSTER AS CLfS
+FROM marca_FC_logw AS A FULL JOIN marca_Fs_logw AS B 
+ON A.CAT_marca=b.CAT_marca ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_marca_c  AS SELECT
+A.*,
+A.CLUSTER AS CLcc,b.CLUSTER AS CLcS
+FROM marca_CC_LOGW AS A FULL JOIN marca_CS_LOGW AS B 
+ON A.CAT_marca=b.CAT_marca ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_marca  AS SELECT
+A.*, B.CLcc,B.CLcS
+FROM fc_RESULT_marca_f   AS A FULL JOIN  fc_RESULT_marca_c AS B 
+ON A.CAT_marca=b.CAT_marca;
+QUIT;
+
+
+
+/***********sex_eta************/
+proc sql;
+create table uni_sex_eta as select 
+cat_sex_eta,
+sum(VEICANNO) as VEICANNO format commax30.2,
+sum(1) as nr format commax30.2,
+sum(FORFAIT_DEBITORI_CARICO) as FORFAIT_DEBITORI_CARICO format commax30.2	,
+sum(FORFAIT_GESTITI_CARICO) as FORFAIT_GESTITI_CARICO format commax30.2	,
+sum(NUMSIN) as NUMSIN format commax30.2	,
+sum(NUM_CAUSATI) as NUM_CAUSATI format commax30.2	,	
+sum(sum(NUMSIN,-NUM_CAUSATI)) as num_sin_sub format commax30.2	,
+sum(NUM_DEB) as NUM_DEB format commax30.2	,
+sum(NUM_GEST) as NUM_GEST format commax30.2	,
+sum(NUM_RCA) as NUM_RCA format commax30.2	,
+sum(gestiti_carico) as gestiti_carico format commax30.2	,
+sum(rca_carico) as rca_carico format commax30.2	,
+sum(carico_tot) as carico_tot format commax30.2	,
+sum(carico_cap100) as carico_cap100 format commax30.2	,
+sum(costo_subito_cap100) as costo_subito_cap100 format commax30.2	,
+sum(costo_causato_cap100) as costo_causato_cap100 format commax30.2	,
+sum(PRMRCA) as PRMRCA format commax30.2
+from db.db_axa_I 
+WHERE ANNO in ( 2008 ,2009) 
+group by 1;
+quit;
+
+
+
+data sex_eta;
+set uni_sex_eta;
+Freq_causata=NUM_CAUSATI/VEICANNO;
+freq_SUBITA=NUM_GEST/VEICANNO;
+log_freq_causata=log(NUM_CAUSATI/VEICANNO);
+log_freq_SUBITA=log(NUM_GEST/VEICANNO);
+Cm_subiti=costo_subito_cap100/NUM_GEST;
+Cm_causati=costo_causato_cap100/NUM_CAUSATI; 
+log_CM_subiti=log(CM_subiti);
+log_CM_causati=log(CM_causati);
+run;
+
+
+
+proc fastclus data=sex_eta radius=0.05 out=sex_eta_FC_logw noprint;
+var log_freq_causata;
+weight VEICANNO;
+run;
+proc fastclus data=sex_eta radius=0.05 out=sex_eta_FS_logw noprint;
+var log_freq_SUBITA;
+weight VEICANNO;
+run;
+proc fastclus data=sex_eta radius=0.1 out=sex_eta_CC_logw noprint;
+var log_Cm_subiti;
+weight NUM_GEST;
+run;
+proc fastclus data=sex_eta radius=0.1 out=sex_eta_CS_logw noprint;
+var log_CM_causati;
+weight NUM_CAUSATI;
+run;
+%macro fcuniv(db);
+proc means data=&db noprint;
+var 
+NR
+VEICANNO
+Freq_causata
+freq_SUBITA
+Cm_subiti
+Cm_causatI
+FORFAIT_DEBITORI_CARICO 
+FORFAIT_GESTITI_CARICO 
+NUMSIN 
+NUM_CAUSATI 
+num_sin_sub 
+NUM_DEB 
+NUM_GEST 
+NUM_RCA 
+gestiti_carico 
+rca_carico 
+carico_tot
+carico_cap100 
+costo_subito_cap100 
+costo_causato_cap100 
+PRMRCA;
+class cluster;
+output out=clusters_&db sum=;
+run;
+%mend fcuniv;
+%fcuniv(sex_eta_FC_logw);
+%fcuniv(sex_eta_Fs_logw);
+%fcuniv(sex_eta_cC_logw);
+%fcuniv(sex_eta_cs_logw);
+
+PROC SQL;
+CREATE TABLE fc_RESULT_sex_eta_f  AS SELECT
+A.*,
+A.CLUSTER AS CLfc,b.CLUSTER AS CLfS
+FROM sex_eta_FC_logw AS A FULL JOIN sex_eta_Fs_logw AS B 
+ON A.CAT_sex_eta=b.CAT_sex_eta ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_sex_eta_c  AS SELECT
+A.*,
+A.CLUSTER AS CLcc,b.CLUSTER AS CLcS
+FROM sex_eta_CC_LOGW AS A FULL JOIN sex_eta_CS_LOGW AS B 
+ON A.CAT_sex_eta=b.CAT_sex_eta ;
+QUIT;
+PROC SQL;
+CREATE TABLE fc_RESULT_sex_eta  AS SELECT
+A.*, B.CLcc,B.CLcS
+FROM fc_RESULT_sex_eta_f   AS A FULL JOIN  fc_RESULT_sex_eta_c AS B 
+ON A.CAT_sex_eta=b.CAT_sex_eta;
+QUIT;
+
+%macro exp(out,filein, sheet);
+
+PROC EXPORT DATA= WORK.&filein.
+OUTFILE= "C:\Documents and Settings\sas\Desktop\tariffa Clienti MPS\settore I 2008\02-CLUSTER\&out..xls" 
+            DBMS=EXCEL REPLACE;
+     SHEET="&sheet."; 
+RUN;
+%mend;
+
+
+%exp(cl_prof,fc_RESULT_prof,prof);
+%exp(cl_prof,clusters_prof_FC_logw, cl_prof_fc);
+%exp(cl_prof,clusters_prof_Fs_logw, cl_prof_fs);
+%exp(cl_prof,clusters_prof_cC_logw, cl_prof_cc);
+%exp(cl_prof,clusters_prof_cs_logw, cl_prof_cs);
+%exp(cl_cv_alim,fc_RESULT_cv_alim,cv_alim);
+%exp(cl_cv_alim,clusters_cv_alim_FC_logw, cl_cv_alim_fc);
+%exp(cl_cv_alim,clusters_cv_alim_Fs_logw, cl_cv_alim_fs);
+%exp(cl_cv_alim,clusters_cv_alim_cC_logw, cl_cv_alim_cc);
+%exp(cl_cv_alim,clusters_cv_alim_cs_logw, cl_cv_alim_cs);
+%exp(cl_kw,fc_RESULT_kw,kw);
+%exp(cl_kw,clusters_kw_FC_logw, cl_kw_fc);
+%exp(cl_kw,clusters_kw_Fs_logw, cl_kw_fs);
+%exp(cl_kw,clusters_kw_cC_logw, cl_kw_cc);
+%exp(cl_kw,clusters_kw_cs_logw, cl_kw_cs);
+%exp(cl_eta_veic,fc_RESULT_eta_veic,eta_veic);
+%exp(cl_eta_veic,clusters_eta_veic_FC_logw, cl_eta_veic_fc);
+%exp(cl_eta_veic,clusters_eta_veic_Fs_logw, cl_eta_veic_fs);
+%exp(cl_eta_veic,clusters_eta_veic_cC_logw, cl_eta_veic_cc);
+%exp(cl_eta_veic,clusters_eta_veic_cs_logw, cl_eta_veic_cs);
+%exp(cl_marca,fc_RESULT_marca,marca);
+%exp(cl_marca,clusters_marca_FC_logw, cl_marca_fc);
+%exp(cl_marca,clusters_marca_Fs_logw, cl_marca_fs);
+%exp(cl_marca,clusters_marca_cC_logw, cl_marca_cc);
+%exp(cl_marca,clusters_marca_cs_logw, cl_marca_cs);
+%exp(cl_prov_urb,fc_RESULT_pr_urb,prov_urb);
+%exp(cl_prov_urb,clusters_provincia_FC_logw, cl_prov_urb_fc);
+%exp(cl_prov_urb,clusters_provincia_Fs_logw, cl_prov_urb_fs);
+%exp(cl_prov_urb,clusters_provincia_cC_logw, cl_prov_urb_cc);
+%exp(cl_prov_urb,clusters_provincia_cs_logw, cl_prov_urb_cs);
+%exp(cl_sex_eta,fc_RESULT_sex_eta,sex_eta);
+%exp(cl_sex_eta,clusters_sex_eta_FC_logw, cl_sex_eta_fc);
+%exp(cl_sex_eta,clusters_sex_eta_Fs_logw, cl_sex_eta_fs);
+%exp(cl_sex_eta,clusters_sex_eta_cC_logw, cl_sex_eta_cc);
+%exp(cl_sex_eta,clusters_sex_eta_cs_logw, cl_sex_eta_cs);

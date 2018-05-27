@@ -1,0 +1,456 @@
+
+
+%macro test_univoco(db=&syslast.,vars=);
+proc sql noprint;
+select count(*) 
+into :count_ini
+from &db.;
+%put &count_ini.;
+
+%let all= ;
+%let nvar = %sysfunc(countw(&vars.,' '));
+%put &nvar.;
+
+%do i = 1 %to &nvar.;
+
+%let var_&i.= %scan(&vars., &i., ' ');
+%put &&var_&i.;
+
+%if &all.= %then %do;
+	%if &i. ne &nvar. %then %do; %let all=&&var_&i.,; %put &all.; %end;
+	%else %do; %let all=&&var_&i.; %put &all.; %end;
+%end;
+%else %do;
+%if &i. ne &nvar. %then %do; %let all=&all.&&var_&i.,; %put &all.; %end;
+%else %do; %let all=&all.&&var_&i.; %put &all.; %end; 
+%end;
+%end;
+
+create table check_univ as select distinct
+&all.
+from &db.;
+
+select count(*) 
+into :count_fin
+from check_univ;
+quit;
+
+%if &count_fin. ne &count_ini. %then %do;
+%let nrows=%sysfunc(sum(&count_ini.,-&count_fin.));
+%put WARNING: La tabella non è univoca per le variabili indicate !! Ci sono &nrows. record duplicati ! ;
+%end;
+%else %do;
+%let nrows=&count_fin.;
+%put NOTE: Ok... la tabella è univoca per le variabili indicate, vai sereno! Ci sono &nrows. record univoci..;
+%end;
+
+proc datasets library=work nodetails;
+delete check_univ;
+run;
+%mend;
+
+
+%macro check_empty;
+PROC sql noprint;
+SELECT COUNT(*) into :RowCnt
+FROM &syslast.
+quit;
+%if &RowCnt. eq 0 %then %do;
+%put WARNING: La tabella è vuota !!;
+%end;
+%else %do;
+%put NOTE: Ok... la tabella non è vuota.. ;
+%end;
+%mend;
+
+
+
+
+
+
+%macro filtro_pol(prod=,label_out=,periodo_estrazione=);
+
+%let prod_all= ;
+%let nvar=%sysfunc(countw(&prod.,' '));
+%do i = 1 %to &nvar.;
+%let prod_&i.= %scan(&prod., &i., ' ');
+%if &prod_all.= %then %do;
+	%if &i. ne &nvar. %then %do; %let prod_all=&&prod_&i.,; %end;
+	%else %do; %let prod_all=&&prod_&i.; %end;
+%end;
+%else %do;
+%if &i. ne &nvar. %then %do; %let prod_all=&prod_all.&&prod_&i.,; %end;
+%else %do; %let prod_all=&prod_all.&&prod_&i.; %end;
+%end;
+%end;
+
+proc sql;
+create table sasdata.filtro_pol_&label_out._&periodo_estrazione. as select
+*
+from sasdata.pol_prod_desc_pc_&periodo_estrazione.
+where cd_prod_0006m in (&prod_all.);
+create index cd_polizza_0020f on sasdata.filtro_pol_&label_out._&periodo_estrazione.;
+quit;
+
+%mend;
+
+
+
+
+
+%macro titoli(periodo_estrazione=,data_interruz_cy=,prod=,label_out=);
+
+proc sql;
+create table sasdata.x1_&label_out._&periodo_estrazione. as select 
+a.cd_polizza_0020f,
+a.cd_oggetto_assicurato_0030f,
+a.cd_provenienza_0001m,
+a.cd_sezione_0003m,
+a.cd_unita_0003m,
+min(a.dt_ini_val_0050f) format=datetime20. as min_dt_50
+from oralib_p.vv0050f_garanzia_polizza as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+on a.cd_polizza_0020f eq b.cd_polizza_0020f
+group by 1,2,3,4,5;
+create index key0_x1 on sasdata.x1_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_oggetto_assicurato_0030f,cd_sezione_0003m,cd_unita_0003m,cd_provenienza_0001m);
+quit;
+
+proc sql;
+create table sasdata.x3_&label_out._&periodo_estrazione. as
+select 
+a.cd_polizza_0020f,
+a.cd_oggetto_assicurato_0030f,
+a.cd_provenienza_0001m,
+min(a.dt_ini_val_0030f) format=datetime20. as min_dt_30
+from oralib_p.vv0030f_oggetto_assicurato as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+on a.cd_polizza_0020f eq b.cd_polizza_0020f
+group by 1,2,3;
+create index key0_x3 on sasdata.x3_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_oggetto_assicurato_0030f,cd_provenienza_0001m);
+quit;
+
+proc sql;
+create table sasdata.x4_&label_out._&periodo_estrazione. as
+select 
+a.cd_polizza_0020f,
+a.cd_provenienza_0001m,
+min(a.dt_ini_val_0020f) format=datetime20. as min_dt_20
+from oralib_p.vv0020f_polizza as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+on a.cd_polizza_0020f eq b.cd_polizza_0020f
+group by 1,2;
+create index key0_x4 on sasdata.x4_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_provenienza_0001m);
+quit;
+
+/* Estraggo i movimenti che generano premio */
+proc sql;
+create table sasdata.mov_pol_&label_out._&periodo_estrazione. as select 
+a.*
+from oralib_p.vv0040f_movim_polizza as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+on a.cd_polizza_0020f eq b.cd_polizza_0020f
+where 
+	a.cd_tp_movimento_pol_0012m in (1,3,53,54,71);
+create index key0_mov_pol on sasdata.mov_pol_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_progressivo_movimento_0040f,cd_provenienza_0001m);
+quit;
+
+/* creo db per costruire flag sostituenti */
+proc sql;
+create table sasdata.fg_sostituenti_&label_out._&periodo_estrazione. 
+as select distinct
+	cd_polizza_0020f,
+	cd_provenienza_0001m
+	from sasdata.mov_pol_&label_out._&periodo_estrazione.
+	where dt_fin_val_0040f eq '31Dec9999:0:0:0'dt and 
+			CD_TP_MOVIMENTO_POL_0012M eq 3;
+create index key_sost on sasdata.fg_sostituenti_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_provenienza_0001m);
+quit;
+
+/* estraggo i titoli contabili di ogni emissione/quietanza */
+proc sql;
+create table sasdata.titoli_&label_out._&periodo_estrazione. as select 
+a.*
+from oralib_p.vv0100f_titolo as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+	on a.cd_polizza_0020f eq b.cd_polizza_0020f  
+where 
+	a.cd_tp_esito_titolo_0102m ne "2" AND 
+	a.DT_INI_COPERTURA_0100F le "&data_interruz_cy.:0:0:0"dt;
+create index key0_tit on sasdata.titoli_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_progressivo_movimento_0040f,cd_progressivo_titolo_0100f,
+	nr_anno_emissione_0100f,cd_provenienza_0001m);
+quit;
+
+/* costruisco macro variabile per filtrare i prodotti selezionati */
+%let prod_all= ;
+%let nvar=%sysfunc(countw(&prod.,' '));
+%do i = 1 %to &nvar.;
+%let prod_&i.= %scan(&prod., &i., ' ');
+%if &prod_all.= %then %do;
+	%if &i. ne &nvar. %then %do; %let prod_all=&&prod_&i.,; %end;
+	%else %do; %let prod_all=&&prod_&i.; %end;
+%end;
+%else %do;
+%if &i. ne &nvar. %then %do; %let prod_all=&prod_all.&&prod_&i.,; %end;
+%else %do; %let prod_all=&prod_all.&&prod_&i.; %end;
+%end;
+%end;
+
+/* estraggo il dettaglio dei titoli (titolo esploso per ramo e garanzia) */
+proc sql;
+create table sasdata.titoli_det_&label_out._&periodo_estrazione. as select *
+from oralib_p.vv0110f_titolo_det 
+where dt_fin_val_0110f eq '31dec9999:0:0:0'dt and 
+	cd_prod_0006m in (&prod_all.) /*and cd_provenienza_0001m=2*/;
+create index key0_tit_det on sasdata.titoli_det_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_oggetto_assicurato_0030f,cd_sezione_0003m,cd_unita_0003m,
+	cd_progressivo_movimento_0040f,cd_progressivo_titolo_0100f,nr_anno_emissione_0100f,cd_provenienza_0001m);
+quit;
+
+/* primo step per costruzione db titoli finale */
+proc sql;
+create table titoliFIN1 as 
+	select distinct
+		a.CD_POLIZZA_0020F,
+		a.CD_PROVENIENZA_0001M,
+		a.CD_OGGETTO_ASSICURATO_0030F,
+		a.CD_PARTITA_ASSICURATA_0110F,
+		a.CD_RAMO_MINISTERIALE_0111M,
+		a.CD_SEZIONE_0003M,
+		a.CD_UNITA_0003M,
+		b.DT_INI_COPERTURA_0100F,
+		left(a.CD_POLIZZA_0020F)||left(put(a.CD_PROVENIENZA_0001M,8.))||left(put(a.CD_OGGETTO_ASSICURATO_0030F,8.))||left(put(a.CD_PARTITA_ASSICURATA_0110F,8.))||left(put(a.CD_RAMO_MINISTERIALE_0111M,8.))||left(put(a.CD_SEZIONE_0003M,8.))||left(put(a.CD_UNITA_0003M,8.))||left(put(b.DT_INI_COPERTURA_0100F,20.)) as my_key,
+		d.cd_tp_movimento_pol_0012m,	
+		a.cd_progressivo_titolo_0100f,
+		a.nr_anno_emissione_0100f,
+		a.CD_PROGRESSIVO_MOVIMENTO_0040F,
+		max(b.DT_SCAD_COPERTURA_0100F) format=datetime20. as DT_SCAD_COPERTURA_0100F,
+		max(min_dt_50, min_dt_30, min_dt_20, min(a.DT_INI_VAL_0110F)) format=datetime20. as DT_INI_VAL_0110F,
+		max(a.DT_FIN_VAL_0110F) format=datetime20. as DT_FIN_VAL_0110F
+		from sasdata.titoli_det_&label_out._&periodo_estrazione. as a 
+		inner join 
+		sasdata.titoli_&label_out._&periodo_estrazione. as b 
+		on
+		a.cd_polizza_0020f=b.cd_polizza_0020f and
+		a.cd_progressivo_movimento_0040f=b.cd_progressivo_movimento_0040f and
+		a.cd_progressivo_titolo_0100f=b.cd_progressivo_titolo_0100f and
+		a.nr_anno_emissione_0100f=b.nr_anno_emissione_0100f and
+		a.cd_provenienza_0001m=b.cd_provenienza_0001m 
+		inner join 
+		sasdata.mov_pol_&label_out._&periodo_estrazione. as d
+		on a.CD_POLIZZA_0020F=d.CD_POLIZZA_0020F and
+		a.CD_PROVENIENZA_0001M=d.CD_PROVENIENZA_0001M and
+		a.cd_progressivo_movimento_0040f=d.cd_progressivo_movimento_0040f 
+		left join
+		sasdata.x1_&label_out._&periodo_estrazione. as x1
+		on 
+		a.cd_polizza_0020f=x1.cd_polizza_0020f and
+		a.cd_oggetto_assicurato_0030f=x1.cd_oggetto_assicurato_0030f and
+		a.cd_sezione_0003m=x1.cd_sezione_0003m and
+		a.cd_unita_0003m=x1.cd_unita_0003m and
+		a.cd_provenienza_0001m=x1.cd_provenienza_0001m 
+		left join
+		sasdata.x3_&label_out._&periodo_estrazione. as x3
+		on 
+		a.cd_polizza_0020f=x3.cd_polizza_0020f and
+		a.cd_oggetto_assicurato_0030f=x3.cd_oggetto_assicurato_0030f and
+		a.cd_provenienza_0001m=x3.cd_provenienza_0001m 
+		left join
+		sasdata.x4_&label_out._&periodo_estrazione. as x4
+		on 
+		a.cd_polizza_0020f=x4.cd_polizza_0020f and
+		a.cd_provenienza_0001m=x4.cd_provenienza_0001m 
+	group by 1,2,3,4,5,6,7,8,9,10,11,12,13
+order by (calculated my_key);
+quit;
+
+data titoliFIN2;
+set titoliFIN1;
+by my_key;
+if first.my_key then cont=1; else cont=0;
+run;
+
+/* mi assicuro di prendere una sola riga per ogni emissione/quietanza */
+proc sql;
+create table sasdata.titoliFIN_&label_out._&periodo_estrazione. as select distinct *
+from titoliFIN2
+where cont=1;
+create index key_tit on sasdata.titoliFIN_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_oggetto_assicurato_0030f,cd_sezione_0003m,cd_unita_0003m,cd_provenienza_0001m,dt_ini_val_0110f);
+quit;
+
+%mend;
+
+
+
+
+
+
+
+%macro date_annull(periodo_estrazione=,label_out=);
+proc sql;
+create table mov_annull_&label_out._&periodo_estrazione. as select 
+a.* 
+from oralib_p.vv0040f_movim_polizza as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+on a.cd_polizza_0020f eq b.cd_polizza_0020f 
+where a.dt_fin_val_0040f eq '31Dec9999:0:0:0'dt and 
+		a.CD_TP_MOVIMENTO_POL_0012M in (7,8,9,12,13,18,19,20,21,23,27,29,46,73,92,117,121,146,149,153,154,246,305);
+quit;
+
+proc sql;
+create table anull_emiss_&label_out._&periodo_estrazione. as select 	
+	a.cd_polizza_0020f,
+	a.cd_provenienza_0001m,
+	max(a.dt_emis_doc_0040f) format=datetime20. as dt_emis_doc_0040f
+	from oralib_p.vv0040f_movim_polizza as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+on a.cd_polizza_0020f eq b.cd_polizza_0020f
+	where a.dt_fin_val_0040f eq '31Dec9999:0:0:0'dt and 
+			a.CD_TP_MOVIMENTO_POL_0012M in (7,8,9,12,13,18,19,20,21,23,27,29,46,73,92,117,121,146,149,153,154,246,305)
+	group by 1,2;
+quit;
+
+proc sql;
+create table pezzo1_&label_out._&periodo_estrazione. as select
+	a.cd_polizza_0020f,
+	a.cd_provenienza_0001m,
+	a.dt_eff_movimento_0040f as which_max_dt_eff,
+	a.CD_TP_MOVIMENTO_POL_0012M as which_max_cd_mov,
+	(case 
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 7 then "Storno senza effetto"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 9 then "Storno per trasferimento"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 12 then "Storno per vendita"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 13 then "Storno per disdetta online"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 18 then "Storno senza rimborso"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 19 then "Storno per distruzione"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 20 then "Storno per furto"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 21 then "Storno per esportazione"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 23 then "Storno per disdetta"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 27 then "Storno per insolvenza"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 29 then "Storno con rimborso"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 46 then "esclusione oggetto (collettive)"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 73 then "Storno per scadenza"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 92 then "Storno da direzione"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 117 then "Storno per conto vendita"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 121 then "Storno per disdetta"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 146 then "Storno per sostituzione oggetto (collettive)"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 149 then "Storno protrazione scadenza (collettive)"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 153 then "Storno per ripensamento"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 154 then "Storno in giornata"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 246 then "Storno per sostituzione adesione (collettive)"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 305 then "Storno adesione no rest premio (collettive)"
+		when a.CD_TP_MOVIMENTO_POL_0012M eq 8 then "Sostituzione"
+		else "Altra tipologia storno" end) format=$50. as causa_annullamento,
+	b.dt_emis_doc_0040f as max_dt_emis_doc
+	from mov_annull_&label_out._&periodo_estrazione. as a inner join 
+	anull_emiss_&label_out._&periodo_estrazione. as b
+	on a.cd_polizza_0020f=b.cd_polizza_0020f and
+		a.cd_provenienza_0001m=b.cd_provenienza_0001m and
+		a.dt_emis_doc_0040f=b.dt_emis_doc_0040f;
+
+create index pezzo1_dt_annull on pezzo1_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_provenienza_0001m,which_max_dt_eff,max_dt_emis_doc);
+quit;
+
+
+proc sql;
+create table pezzo2_&label_out._&periodo_estrazione. as select distinct
+	a.cd_polizza_0020f,
+	a.cd_provenienza_0001m,
+	a.dt_eff_movimento_0040f as data_esclusione_annullamento,
+	max(a.dt_emis_doc_0040f) format=datetime20. as dt_emis_doc_0040f
+	from oralib_p.vv0040f_movim_polizza as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+	on a.cd_polizza_0020f eq b.cd_polizza_0020f 
+	where a.dt_fin_val_0040f eq '31Dec9999:0:0:0'dt and 
+			a.CD_TP_MOVIMENTO_POL_0012M in (30,663)
+	group by 1,2,3;
+create index pezzo2_dt_annull on pezzo2_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_provenienza_0001m,data_esclusione_annullamento,dt_emis_doc_0040f);
+quit;
+
+proc sql;
+create table pezzo_fin_&label_out._&periodo_estrazione. as select
+	a.cd_polizza_0020f,
+	a.cd_provenienza_0001m,	
+	a.which_max_dt_eff,
+	a.which_max_cd_mov,
+	a.causa_annullamento,
+	a.max_dt_emis_doc,
+	(case when b.dt_emis_doc_0040f ne . then 1 else 0 end) as flg_escludi
+from pezzo1_&label_out._&periodo_estrazione. as a left join pezzo2_&label_out._&periodo_estrazione. as b
+on 
+	a.cd_polizza_0020f eq b.cd_polizza_0020f and
+	a.cd_provenienza_0001m eq b.cd_provenienza_0001m and
+	a.which_max_dt_eff eq b.data_esclusione_annullamento and
+	a.max_dt_emis_doc lt b.dt_emis_doc_0040f; 
+quit;
+
+proc sql;
+create table sasdata.date_annull_&label_out._&periodo_estrazione. as select
+	cd_polizza_0020f,
+	cd_provenienza_0001m,	
+	which_max_dt_eff as data_annullamento,
+	which_max_cd_mov as codice_annullamento,
+	causa_annullamento
+	from pezzo_fin_&label_out._&periodo_estrazione.
+	where flg_escludi ne 1; 
+create index dt_annull on sasdata.date_annull_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_provenienza_0001m);
+quit;
+%mend;
+
+%macro garanzia_pol(periodo_estrazione=,label_out=);
+proc sql;
+create table sasdata.garanzia_pol_&label_out._&periodo_estrazione.
+as select 
+a.*
+from oralib_p.vv0050f_garanzia_polizza as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+	on a.cd_polizza_0020f eq b.cd_polizza_0020f;
+create index key_gar_pol on sasdata.garanzia_pol_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_oggetto_assicurato_0030f,cd_provenienza_0001m,cd_sezione_0003m,cd_unita_0003m,dt_ini_val_0050f,dt_fin_val_0050f);
+quit;
+%mend;
+
+%macro oggetto_assic(periodo_estrazione=, label_out=);
+proc sql;
+create table sasdata.oggetto_assic_&label_out._&periodo_estrazione.
+as select 
+a.*
+from oralib_p.vv0030f_oggetto_assicurato as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+	on a.cd_polizza_0020f eq b.cd_polizza_0020f;
+create index key_ogg on sasdata.oggetto_assic_&label_out._&periodo_estrazione. (cd_polizza_0020f,cd_oggetto_assicurato_0030f,cd_provenienza_0001m,dt_ini_val_0030f,dt_fin_val_0030f);
+quit;
+%mend;
+
+%macro anagrafica(periodo_estrazione=,label_out=);
+proc sql;
+create table sasdata.pers_anag_&label_out._&periodo_estrazione. as select a.*
+from oralib_p.vv0070M_persona as a inner join (select distinct cd_persona_0070M FROM sasdata.filtro_pol_&label_out._&periodo_estrazione.) as b
+	on a.cd_persona_0070m=b.cd_persona_0070m
+	where a.cd_provenienza_0001m eq 1;
+create index key_pers on sasdata.pers_anag_&label_out._&periodo_estrazione. (cd_persona_0070m, dt_ini_val_0070m, dt_fin_val_0070m); 
+quit;
+%mend;
+
+
+%macro estrai_pars(periodo_estrazione=,label_out=,id=,label_par=,tp_par=,tp_val=,short_name=);
+proc sql;
+create table sasdata.&short_name._&label_out._&periodo_estrazione. as select 
+a.dt_ini_val_0060f,
+max(a.dt_fin_val_0060f) format=datetime20. as dt_fin_val_0060f ,
+%if &tp_par.=V %then a.cd_polizza_0020f,;
+%if &tp_par.=O %then a.cd_polizza_0020f, a.cd_oggetto_assicurato_0030f,;
+%if &tp_par.=G %then a.cd_polizza_0020f, a.cd_oggetto_assicurato_0030f, a.cd_sezione_0003m, a.cd_unita_0003m,;
+
+%if &tp_val.=num %then a.vl_valore_numerico_0060f;
+%if &tp_val.=char %then a.ds_valore_carattere_0060f;
+%if &tp_val.=bool %then a.fg_valore_booleano_0060f;
+%if &tp_val.=date %then a.dt_valore_date_0060f;
+as &short_name.
+FROM oralib_p.VV0060F_parametro_garanzia as a inner join sasdata.filtro_pol_&label_out._&periodo_estrazione. as b
+	on a.cd_polizza_0020f eq b.cd_polizza_0020f 
+
+%if &id.=1 %then where a.ds_dnm_label_0060f in ("&label_par.");
+%if &id.=2 %then where a.cd_parametro_integrazion_0060f=&label_par.;
+
+%if &tp_par.=V %then group by 1,3,4;
+%if &tp_par.=O %then group by 1,3,4,5;
+%if &tp_par.=G %then group by 1,3,4,5,6,7;
+;
+create index key_&short_name. on sasdata.&short_name._&label_out._&periodo_estrazione. 
+(
+%if &tp_par.=V %then cd_polizza_0020f,; 
+%if &tp_par.=O %then cd_polizza_0020f, cd_oggetto_assicurato_0030f,; 
+%if &tp_par.=G %then cd_polizza_0020f, cd_oggetto_assicurato_0030f,  cd_sezione_0003m, cd_unita_0003m,; 
+dt_ini_val_0060f, dt_fin_val_0060f);
+QUIT;
+
+%mend;
+

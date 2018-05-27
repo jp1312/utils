@@ -1,0 +1,38 @@
+Sub GetUniqueList()
+   
+    Dim rCell As Range
+    Dim colUnique As Collection
+    Dim sh As Worksheet
+    Dim i As Long
+   
+    'only work on ranges
+    If TypeName(Selection) = "Range" Then
+       
+       'create a new collection
+       Set colUnique = New Collection
+       
+       'loop through all selected cells
+       'and add to collection
+     
+       For Each rCell In Selection.Cells
+            On Error Resume Next
+               'if value exists, it won't be added
+               colUnique.Add rCell.Value, CStr(rCell.Value)
+            On Error GoTo 0
+        Next rCell
+       
+        'make a new sheet to put the unique list
+        Set sh = ActiveWorkbook.Worksheets.Add
+       
+        'Write the unique list to the new sheet
+        For i = 1 To colUnique.Count
+            sh.Range("A1").Offset(i, 0).Value = colUnique(i)
+        Next i
+       
+        'sort with no headers
+        sh.Range(sh.Range("A2"), sh.Range("A2").End(xlDown)) _
+            .Sort sh.Range("A2"), xlAscending, , , , , , xlNo
+       
+    End If
+   
+End Sub

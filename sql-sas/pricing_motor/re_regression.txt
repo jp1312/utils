@@ -1,0 +1,74 @@
+
+data db_glm_test (keep=
+premio_teo
+veicanno
+anno
+CLA_PROV_AXAMPS
+CLA_PROF_AXAMPS
+CLA_ETA_P_AXAMPS
+CLA_SINPREG_NOSIN
+CLA_BM
+CLA_ETA_V_AXA
+CLA_MAR_AXAMPS	
+CLA_CVALKW_AXA2
+CLA_FRAZ_AXAMPS
+CLA_MAX_AXAMPS
+CLA_ETA_AXAMPS
+);
+set premio_teo;
+where premio_teo>0 and veicanno>0;
+run;
+
+
+
+
+
+
+/******************* Re-Regression *************************************/
+
+%LET n_mod=p_teo;
+
+
+PROC GENMOD DATA=db_glm_test;		
+CLASS 
+
+anno
+CLA_PROV_AXAMPS
+CLA_PROF_AXAMPS
+CLA_ETA_P_AXAMPS
+CLA_SINPREG_NOSIN
+CLA_BM
+CLA_ETA_V_AXA
+CLA_MAR_AXAMPS	
+CLA_CVALKW_AXA2
+CLA_FRAZ_AXAMPS
+CLA_MAX_AXAMPS
+CLA_ETA_AXAMPS / order=freq desc;
+
+	MODEL premio_teo =  
+	anno
+	CLA_PROV_AXAMPS
+	CLA_PROF_AXAMPS
+	CLA_ETA_P_AXAMPS
+	CLA_SINPREG_NOSIN
+	CLA_BM
+	CLA_ETA_V_AXA
+	CLA_MAR_AXAMPS	
+	CLA_CVALKW_AXA2
+	CLA_FRAZ_AXAMPS
+	CLA_MAX_AXAMPS
+	CLA_ETA_AXAMPS /  NOINT LINK=LOG DIST=GAMMA TYPE1 TYPE3 ALPHA=0.05 WALDCI; 
+
+	WEIGHT veicanno;
+	
+ods output ParameterEstimates=/*rcampsas.*/parameters_&n_mod.;
+ods output Modelfit=/*rcampsas.*/Modelfit_&n_mod.;
+ods output Modelinfo=/*rcampsas.*/Modelinf_&n_mod.;
+ods output type1=/*rcampsas.*/type_1&n_mod.;
+ods output type3=/*rcampsas.*/type_3&n_mod.;
+
+/*  output out=Diagnostics pred=Pred resraw=ResRaw reschi=ResChi resdev=ResDev
+	stdreschi=StdResChi stdresdev=StdResDev; */
+RUN;
+
+/********************************* Fine Re-Regression ***************************/
